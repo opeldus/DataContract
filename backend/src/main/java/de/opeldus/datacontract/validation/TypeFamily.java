@@ -17,13 +17,14 @@ public enum TypeFamily {
     OBJECT("object"),
     ARRAY("array");
 
-    private static final Pattern TYPE = Pattern.compile("^\\s*([A-Za-z_]+(?: [A-Za-z]+)*)\\s*(?:\\(([^)]*)\\))?.*$");
+    private static final Pattern TYPE = Pattern.compile("^\\s*([A-Za-z_][A-Za-z0-9_]*(?: [A-Za-z]+)*)\\s*(?:\\(([^)]*)\\))?.*$");
     private static final Pattern ZERO_SCALE = Pattern.compile("^\\s*\\d+\\s*,\\s*0\\s*$");
 
     private static final Map<String, TypeFamily> TYPES = Map.ofEntries(
             Map.entry("CHAR", STRING), Map.entry("CHARACTER", STRING), Map.entry("VARCHAR", STRING),
             Map.entry("VARCHAR2", STRING), Map.entry("CHARACTER VARYING", STRING), Map.entry("GRAPHIC", STRING),
             Map.entry("VARGRAPHIC", STRING), Map.entry("CLOB", STRING), Map.entry("DBCLOB", STRING),
+            Map.entry("LONG VARCHAR", STRING), Map.entry("CHAR VARYING", STRING),
             Map.entry("TEXT", STRING), Map.entry("STRING", STRING),
             Map.entry("SMALLINT", INTEGER), Map.entry("INT", INTEGER), Map.entry("INTEGER", INTEGER),
             Map.entry("BIGINT", INTEGER), Map.entry("TINYINT", INTEGER),
@@ -35,7 +36,8 @@ public enum TypeFamily {
             Map.entry("TIME", TIME),
             Map.entry("TIMESTAMP", TIMESTAMP), Map.entry("TIMESTAMP_NTZ", TIMESTAMP),
             Map.entry("TIMESTAMP_LTZ", TIMESTAMP), Map.entry("TIMESTAMP_TZ", TIMESTAMP),
-            Map.entry("DATETIME", TIMESTAMP),
+            Map.entry("DATETIME", TIMESTAMP), Map.entry("TIMESTAMP WITH TIME ZONE", TIMESTAMP),
+            Map.entry("TIMESTAMP WITHOUT TIME ZONE", TIMESTAMP), Map.entry("TIMESTAMP WITH LOCAL TIME ZONE", TIMESTAMP),
             Map.entry("VARIANT", OBJECT), Map.entry("OBJECT", OBJECT),
             Map.entry("ARRAY", ARRAY));
 

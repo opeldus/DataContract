@@ -29,6 +29,21 @@ public final class SemanticVersion {
         return 0;
     }
 
+    /** Which part differs first; both arguments must be valid. */
+    public static Bump bump(String from, String to) {
+        var a = from.split("\\.");
+        var b = to.split("\\.");
+        if (!a[0].equals(b[0])) {
+            return Bump.MAJOR;
+        }
+        if (!a[1].equals(b[1])) {
+            return Bump.MINOR;
+        }
+        return a[2].equals(b[2]) ? Bump.NONE : Bump.PATCH;
+    }
+
+    public enum Bump { NONE, PATCH, MINOR, MAJOR }
+
     public static boolean sameMajor(String left, String right) {
         return left.split("\\.")[0].equals(right.split("\\.")[0]);
     }

@@ -9,6 +9,7 @@ import {
   reviewActions,
   ruleIndexOf,
 } from "./api";
+import { ChangePanel, DdlStatusLine } from "./ChangePanel";
 import { STATUS_LABELS } from "./labels";
 import { ReviewPanel } from "./ReviewPanel";
 import { emptyRule, RuleGrid } from "./RuleGrid";
@@ -213,9 +214,18 @@ export function MappingEditor({ id, me, onBack, onOpenProduct, onDirtyChange }: 
         />
       </section>
 
+      <ChangePanel
+        mappingId={current.id}
+        revision={current.version}
+        dirty={dirty}
+        onOpenProduct={onOpenProduct}
+        onSelectRule={setSelectedRuleId}
+      />
+
       <div className="columns">
         <section className="panel" aria-label="Prüfung">
           <h2>Prüfung</h2>
+          <DdlStatusLine />
           {dirty && <p className="meta">Wird beim Speichern aktualisiert.</p>}
           {errors.length === 0 && warnings.length === 0 && <p className="ok">Keine Befunde.</p>}
           <ul className="issues">

@@ -4,6 +4,7 @@ import static de.opeldus.datacontract.common.ApiExceptions.badRequest;
 import static de.opeldus.datacontract.common.ApiExceptions.notFound;
 
 import de.opeldus.datacontract.artifact.ArtifactService;
+import de.opeldus.datacontract.change.ContractSnapshot;
 import de.opeldus.datacontract.mapping.ContractVersion;
 import de.opeldus.datacontract.mapping.ContractVersionRepository;
 import de.opeldus.datacontract.mapping.Mapping;
@@ -84,7 +85,8 @@ public class ReviewService {
         var generated = artifacts.generate(mapping);
         var title = mapping.getContractName() + " " + mapping.getContractVersion();
         var commit = workflow.publish(mapping, generated, artifacts.contentHash(generated), title, actor);
-        contractVersions.save(new ContractVersion(mapping.getId(), mapping.getContractVersion(), commit));
+        contractVersions.save(new ContractVersion(mapping.getId(), mapping.getContractVersion(), commit,
+                ContractSnapshot.of(mapping).toJson()));
         return saved(mapping);
     }
 

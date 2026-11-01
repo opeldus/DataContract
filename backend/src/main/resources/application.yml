@@ -28,6 +28,15 @@ app:
     datahub:
       url: ${DATAHUB_URL:}
       token: ${DATAHUB_TOKEN:}
+  # Repository with the DDL files of the target tables; without a URL the comparison is skipped.
+  ddl:
+    refresh-interval: PT15M
+    workdir: ${DDL_WORKDIR:./data/ddl}
+    remote-url: ${DDL_REMOTE_URL:}
+    branch: ${DDL_BRANCH:main}
+    path: ${DDL_PATH:}
+    username: ${DDL_USERNAME:}
+    token: ${DDL_TOKEN:}
   git:
     workdir: ${GIT_WORKDIR:./data/artifacts}
     remote-url: ${GIT_REMOTE_URL:}

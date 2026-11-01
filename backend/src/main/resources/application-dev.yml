@@ -20,5 +20,7 @@ app:
         roles: [REVIEWER]
   catalog:
     demo: true
+  ddl:
+    demo: true
   git:
     remote-url: ${GIT_REMOTE_URL:./data/artifacts-remote.git}

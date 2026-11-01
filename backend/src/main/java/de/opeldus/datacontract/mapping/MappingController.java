@@ -2,6 +2,7 @@ package de.opeldus.datacontract.mapping;
 
 import static de.opeldus.datacontract.common.ApiExceptions.badRequest;
 
+import de.opeldus.datacontract.change.ChangeReport;
 import de.opeldus.datacontract.mapping.MappingDtos.CreateMappingRequest;
 import de.opeldus.datacontract.mapping.MappingDtos.ImportResult;
 import de.opeldus.datacontract.mapping.MappingDtos.MappingDetail;
@@ -69,6 +70,11 @@ public class MappingController {
         } catch (IOException exception) {
             throw badRequest("Die Datei konnte nicht gelesen werden.");
         }
+    }
+
+    @GetMapping("/{id}/changes")
+    public ChangeReport changes(@PathVariable UUID id) {
+        return service.changes(id);
     }
 
     @GetMapping("/{id}/preview")

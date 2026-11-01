@@ -4,6 +4,8 @@ import static de.opeldus.datacontract.common.ApiExceptions.conflict;
 import static de.opeldus.datacontract.common.ApiExceptions.notFound;
 
 import de.opeldus.datacontract.artifact.ArtifactService;
+import de.opeldus.datacontract.change.ChangeReport;
+import de.opeldus.datacontract.change.ContractChangeAnalyzer;
 import de.opeldus.datacontract.imports.ExcelMappingImporter;
 import de.opeldus.datacontract.mapping.MappingDtos.CreateMappingRequest;
 import de.opeldus.datacontract.mapping.MappingDtos.EventDto;
@@ -35,14 +37,16 @@ public class MappingService {
     private final MappingValidator validator;
     private final ArtifactService artifacts;
     private final ExcelMappingImporter excelImporter;
+    private final ContractChangeAnalyzer changes;
 
     public MappingService(MappingRepository mappings, ReviewEventRepository events, MappingValidator validator,
-            ArtifactService artifacts, ExcelMappingImporter excelImporter) {
+            ArtifactService artifacts, ExcelMappingImporter excelImporter, ContractChangeAnalyzer changes) {
         this.mappings = mappings;
         this.events = events;
         this.validator = validator;
         this.artifacts = artifacts;
         this.excelImporter = excelImporter;
+        this.changes = changes;
     }
 
     @Transactional(readOnly = true)
@@ -106,6 +110,11 @@ public class MappingService {
         return artifacts.generate(load(id)).stream()
                 .map(file -> new PreviewFile(file.path(), file.content()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ChangeReport changes(UUID id) {
+        return changes.analyze(load(id));
     }
 
     public MappingDetail detail(Mapping mapping) {

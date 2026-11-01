@@ -1,4 +1,4 @@
-import type { MappingStatus } from "./api";
+import type { ChangeImpact, MappingStatus } from "./api";
 
 export const STATUS_LABELS: Record<MappingStatus, string> = {
   DRAFT: "Entwurf",
@@ -18,6 +18,12 @@ export const EVENT_LABELS: Record<string, string> = {
   APPROVED: "hat freigegeben",
   REOPENED: "hat wieder geöffnet",
   PUBLISHED: "hat nach Git veröffentlicht",
+};
+
+export const IMPACT_LABELS: Record<ChangeImpact, string> = {
+  BREAKING: "Inkompatibel",
+  CONTENT: "Inhaltlich",
+  DOCUMENTATION: "Dokumentation",
 };
 
 export const PRODUCT_TYPES: { value: string; label: string }[] = [

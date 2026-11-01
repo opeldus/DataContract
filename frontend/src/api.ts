@@ -149,6 +149,42 @@ export interface Graph {
   edges: GraphEdge[];
 }
 
+export type ChangeImpact = "DOCUMENTATION" | "CONTENT" | "BREAKING";
+
+export interface ContractChange {
+  ruleId: string | null;
+  code: string;
+  impact: ChangeImpact;
+  column: string | null;
+  message: string;
+  before: string | null;
+  after: string | null;
+}
+
+export interface AffectedProduct {
+  productId: string;
+  productName: string;
+  productTitle: string;
+  pinnedVersion: string | null;
+  direct: boolean;
+}
+
+export interface ChangeReport {
+  baselineVersion: string | null;
+  baselineAvailable: boolean;
+  changes: ContractChange[];
+  affected: AffectedProduct[];
+}
+
+export interface DdlStatus {
+  configured: boolean;
+  revision: string | null;
+  refreshedAt: string | null;
+  tableCount: number;
+  warnings: string[];
+  error: string | null;
+}
+
 /** The same review endpoints exist below /api/mappings/{id} and /api/products/{id}. */
 export interface ReviewActions<T> {
   submit: () => Promise<T>;
@@ -268,6 +304,8 @@ export const api = {
   },
   preview: (id: string) => request<PreviewFile[]>(`/api/mappings/${id}/preview`),
 
+  changes: (id: string) => request<ChangeReport>(`/api/mappings/${id}/changes`),
+  ddlStatus: () => request<DdlStatus>("/api/ddl/status"),
   consumers: (id: string) => request<ContractConsumer[]>(`/api/mappings/${id}/consumers`),
 
   listProducts: () => request<ProductSummary[]>("/api/products"),

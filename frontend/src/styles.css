@@ -160,3 +160,15 @@ select:disabled { background: var(--bg); color: var(--muted); }
 .graph-edge.impact { stroke: #d8a200; stroke-width: 2.5; }
 .graph-edge.dimmed { opacity: 0.25; }
 .graph-arrow { fill: #9aa5b4; }
+
+.impact { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; white-space: nowrap; background: var(--bg); }
+.impact-BREAKING { background: var(--error-bg); color: var(--error); font-weight: 600; }
+.impact-CONTENT { background: var(--warning-bg); color: var(--warning); }
+.change-summary { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.6rem; }
+.change-table-wrapper { overflow-x: auto; }
+.change-table { width: 100%; border-collapse: collapse; min-width: 44rem; }
+.change-table th { text-align: left; font-size: 0.82rem; color: var(--muted); padding: 0.3rem; border-bottom: 1px solid var(--border); }
+.change-table td { padding: 0.35rem 0.3rem; border-bottom: 1px solid var(--bg); vertical-align: top; }
+.change-table .value { overflow-wrap: anywhere; }
+.change-table del { color: var(--error); }
+.change-table ins { color: var(--ok); text-decoration: none; }

@@ -27,18 +27,24 @@ public class ContractVersion {
     @Column(updatable = false)
     private Instant publishedAt = Instant.now();
 
+    /** Null for versions published before snapshots existed. */
+    @Column(updatable = false)
+    private String snapshot;
+
     protected ContractVersion() {}
 
-    public ContractVersion(UUID mappingId, String version, String commitId) {
+    public ContractVersion(UUID mappingId, String version, String commitId, String snapshot) {
         this.mappingId = mappingId;
         this.version = version;
         this.commitId = commitId;
+        this.snapshot = snapshot;
     }
 
     public UUID getMappingId() { return mappingId; }
     public String getVersion() { return version; }
     public String getCommitId() { return commitId; }
     public Instant getPublishedAt() { return publishedAt; }
+    public String getSnapshot() { return snapshot; }
 
     public record Key(UUID mappingId, String version) implements Serializable {}
 }

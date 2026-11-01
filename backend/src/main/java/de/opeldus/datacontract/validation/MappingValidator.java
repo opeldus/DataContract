@@ -6,6 +6,9 @@ import static de.opeldus.datacontract.validation.ValidationIssue.warning;
 import de.opeldus.datacontract.artifact.OdcsSchemaValidator;
 import de.opeldus.datacontract.artifact.OdcsContractGenerator;
 import de.opeldus.datacontract.catalog.CatalogSearch;
+import de.opeldus.datacontract.change.ChangeImpact;
+import de.opeldus.datacontract.change.ContractChangeAnalyzer;
+import de.opeldus.datacontract.ddl.DdlComparison;
 import de.opeldus.datacontract.mapping.Mapping;
 import de.opeldus.datacontract.mapping.MappingRule;
 import java.util.ArrayList;
@@ -23,12 +26,16 @@ public class MappingValidator {
     private final CatalogSearch catalog;
     private final OdcsContractGenerator odcsGenerator;
     private final OdcsSchemaValidator odcsSchema;
+    private final ContractChangeAnalyzer changes;
+    private final DdlComparison ddl;
 
     public MappingValidator(CatalogSearch catalog, OdcsContractGenerator odcsGenerator,
-            OdcsSchemaValidator odcsSchema) {
+            OdcsSchemaValidator odcsSchema, ContractChangeAnalyzer changes, DdlComparison ddl) {
         this.catalog = catalog;
         this.odcsGenerator = odcsGenerator;
         this.odcsSchema = odcsSchema;
+        this.changes = changes;
+        this.ddl = ddl;
     }
 
     public List<ValidationIssue> validate(Mapping mapping) {
@@ -43,12 +50,39 @@ public class MappingValidator {
         for (var rule : mapping.getRules()) {
             validateRule(rule, targets, issues);
         }
+        issues.addAll(ddl.compare(mapping));
+        validateVersionBump(mapping, issues);
         if (issues.stream().noneMatch(issue -> issue.severity() == ValidationIssue.Severity.ERROR)) {
             for (var message : odcsSchema.validate(odcsGenerator.toDocument(mapping))) {
                 issues.add(error("ODCS_SCHEMA", "Der erzeugte Contract verletzt ODCS: " + message, null, null));
             }
         }
         return issues;
+    }
+
+    /** The version number has to tell consumers what the change means for them. */
+    private void validateVersionBump(Mapping mapping, List<ValidationIssue> issues) {
+        var published = mapping.getPublishedVersion();
+        var version = mapping.getContractVersion();
+        if (!mapping.getStatus().isEditable() || published == null || !SemanticVersion.isValid(version)) {
+            return;
+        }
+        var report = changes.analyze(mapping);
+        var bump = SemanticVersion.bump(published, version);
+        if (report.highestImpact() == ChangeImpact.BREAKING && bump != SemanticVersion.Bump.MAJOR) {
+            issues.add(error("CHANGE_NEEDS_MAJOR",
+                    "Inkompatible Änderungen brauchen eine neue Hauptversion, zum Beispiel "
+                            + new java.math.BigInteger(published.split("\\.")[0]).add(java.math.BigInteger.ONE) + ".0.0.",
+                    null, "contractVersion"));
+        } else if (report.highestImpact() == ChangeImpact.CONTENT && bump == SemanticVersion.Bump.PATCH) {
+            issues.add(warning("CHANGE_NEEDS_MINOR",
+                    "Inhaltliche Änderungen sollten die mittlere Versionsstelle erhöhen.", null, "contractVersion"));
+        }
+        if (report.highestImpact() == ChangeImpact.BREAKING && !report.affected().isEmpty()) {
+            var names = report.affected().stream().map(product -> product.productName()).toList();
+            issues.add(warning("BREAKING_AFFECTS_CONSUMERS",
+                    "Die inkompatible Änderung betrifft: " + String.join(", ", names) + ".", null, null));
+        }
     }
 
     private void validateHeader(Mapping mapping, List<ValidationIssue> issues) {

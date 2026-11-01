@@ -15,8 +15,11 @@ keinen Git-Zugang.
 - Prüfung der Abhängigkeiten: fehlende oder nicht veröffentlichte Contracts, neuere Versionen, mehrere Lieferanten
   eines Contracts und Abhängigkeitskreise
 - Abhängigkeitsgraph mit Auswirkungen je Element und Anzeige der Abnehmer am Mapping
+- Fachlicher Vergleich mit der letzten veröffentlichten Version: Einstufung als inkompatibel, inhaltlich oder
+  Dokumentation, passende Versionserhöhung und betroffene Datenprodukte
+- Vergleich des Ziels mit DDL-Dateien aus Git, ohne Datenbankzugriff
 
-Noch nicht enthalten: Releases, Jira und Confluence, DDL-Abgleich, SSO. Die Anwender stehen bisher in der
+Noch nicht enthalten: Releases, Jira und Confluence, SSO. Die Anwender stehen bisher in der
 Konfiguration.
 
 ## Lokal starten
@@ -54,6 +57,13 @@ Ohne Profil nutzt die Anwendung PostgreSQL (`docker-compose.yml`) und legt keine
 | `GIT_REMOTE_URL`, `GIT_BRANCH` | Artefakt-Repo; ohne URL bleiben Commits lokal |
 | `GIT_USERNAME`, `GIT_TOKEN` | Zugang des technischen Git-Users über HTTPS |
 | `GIT_WORKDIR`, `GIT_BOT_NAME`, `GIT_BOT_EMAIL` | Arbeitsverzeichnis und Committer |
+| `DDL_REMOTE_URL`, `DDL_BRANCH`, `DDL_PATH` | Repo mit den DDL-Dateien (`*.sql`) und optional ein Ordner; ohne URL entfällt der Vergleich |
+| `DDL_USERNAME`, `DDL_TOKEN`, `DDL_WORKDIR` | Lesezugang über HTTPS und Arbeitsverzeichnis |
+
+Der DDL-Vergleich liest `CREATE`, `ALTER`, `DROP` und `RENAME TABLE` aus DB2 und Snowflake in der Reihenfolge der
+Dateipfade, sodass auch Flyway-Migrationen funktionieren (`V2` vor `V10`). Was nicht verstanden wird, erscheint als
+Warnung am DDL-Stand im Bereich „Prüfung“. Abweichungen zu einer vorhandenen Tabelle sperren das Einreichen, eine Tabelle
+ohne DDL erzeugt nur einen Hinweis.
 
 Die Vorlage `ci/artifact-repo-ci.yml` prüft veröffentlichte Contracts mit der Data Contract CLI und Datenprodukte gegen
 das ODPS-Schema.
@@ -62,6 +72,7 @@ das ODPS-Schema.
 
 - `ArtifactGenerator`: weitere Dateien je Mapping erzeugen, zum Beispiel dbt
 - `CatalogProvider`: weitere Metadatenquellen anbinden
+- `DdlSource`: DDL aus anderen Quellen lesen
 
 Beans dieser Typen werden automatisch eingebunden.
 
