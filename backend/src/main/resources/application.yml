@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: datacontract
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/datacontract}
+    username: ${DB_USER:datacontract}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+logging:
+  level:
+    # The ODCS schema defines helper keywords that the validator would log as unknown at startup.
+    com.networknt.schema.UnknownKeywordFactory: ERROR
+
+app:
+  # Passwords use Spring's {id}hash format, e.g. {bcrypt}$2a$...
+  security:
+    users: []
+  catalog:
+    refresh-interval: PT1H
+    datahub:
+      url: ${DATAHUB_URL:}
+      token: ${DATAHUB_TOKEN:}
+  git:
+    workdir: ${GIT_WORKDIR:./data/artifacts}
+    remote-url: ${GIT_REMOTE_URL:}
+    branch: ${GIT_BRANCH:main}
+    username: ${GIT_USERNAME:}
+    token: ${GIT_TOKEN:}
+    bot-name: ${GIT_BOT_NAME:DataContract Bot}
+    bot-email: ${GIT_BOT_EMAIL:datacontract-bot@localhost}

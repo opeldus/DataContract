@@ -1,0 +1,24 @@
+# Local development only: file-based H2, demo users and a demo catalog.
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/dev;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password: ""
+
+app:
+  security:
+    users:
+      - username: anna
+        password: "{noop}anna"
+        display-name: Anna Autor
+        email: anna@example.invalid
+        roles: [EDITOR]
+      - username: rene
+        password: "{noop}rene"
+        display-name: Rene Reviewer
+        email: rene@example.invalid
+        roles: [REVIEWER]
+  catalog:
+    demo: true
+  git:
+    remote-url: ${GIT_REMOTE_URL:./data/artifacts-remote.git}

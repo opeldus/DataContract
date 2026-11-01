@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+
+app:
+  security:
+    users:
+      - username: anna
+        password: "{noop}anna"
+        display-name: Anna Autor
+        email: anna@example.invalid
+        roles: [EDITOR]
+      - username: rene
+        password: "{noop}rene"
+        display-name: Rene Reviewer
+        email: rene@example.invalid
+        roles: [REVIEWER]
+      - username: both
+        password: "{noop}both"
+        roles: [EDITOR, REVIEWER]
+  catalog:
+    demo: true

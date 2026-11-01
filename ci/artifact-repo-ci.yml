@@ -1,0 +1,31 @@
+# Vorlage für das Artefakt-Repo, in das die Anwendung Contracts veröffentlicht.
+# Dort ablegen als .github/workflows/contracts.yml.
+name: Data Contracts
+
+on:
+  push:
+    paths: ["contracts/**"]
+  pull_request:
+    paths: ["contracts/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "datacontract-cli==1.2.9"
+      - name: Contracts gegen das ODCS-Schema prüfen
+        run: |
+          status=0
+          while IFS= read -r contract; do
+            echo "::group::$contract"
+            datacontract lint "$contract" || status=1
+            echo "::endgroup::"
+          done < <(find contracts -name odcs.yaml)
+          exit $status
