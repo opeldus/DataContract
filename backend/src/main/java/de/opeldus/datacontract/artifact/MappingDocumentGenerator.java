@@ -16,7 +16,7 @@ public class MappingDocumentGenerator implements ArtifactGenerator {
     public GeneratedArtifact generate(Mapping mapping) {
         var document = new LinkedHashMap<String, Object>();
         document.put("kind", "MappingDocument");
-        document.put("id", mapping.getId().toString());
+        document.put("id", mapping.getKey().toString());
         document.put("name", mapping.getName());
         document.put("contract", mapping.getContractName());
         document.put("contractVersion", mapping.getContractVersion());
@@ -27,7 +27,7 @@ public class MappingDocumentGenerator implements ArtifactGenerator {
 
     private Map<String, Object> rule(MappingRule rule) {
         var document = new LinkedHashMap<String, Object>();
-        document.put("id", rule.getId().toString());
+        document.put("id", rule.getLineageId().toString());
         putIfPresent(document, "sourceDataset", rule.getSourceDataset());
         putIfPresent(document, "sourceColumn", rule.getSourceColumn());
         putIfPresent(document, "targetColumn", rule.getTargetColumn());

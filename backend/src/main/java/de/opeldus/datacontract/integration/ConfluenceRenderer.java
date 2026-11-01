@@ -1,6 +1,7 @@
 package de.opeldus.datacontract.integration;
 
 import de.opeldus.datacontract.mapping.Mapping;
+import de.opeldus.datacontract.mapping.MappingRepository;
 import de.opeldus.datacontract.product.DataProduct;
 import de.opeldus.datacontract.product.DataProductPort;
 import de.opeldus.datacontract.product.PortDirection;
@@ -12,9 +13,11 @@ import org.springframework.stereotype.Component;
 class ConfluenceRenderer {
 
     private final RequirementDirectory requirements;
+    private final MappingRepository mappings;
 
-    ConfluenceRenderer(RequirementDirectory requirements) {
+    ConfluenceRenderer(RequirementDirectory requirements, MappingRepository mappings) {
         this.requirements = requirements;
+        this.mappings = mappings;
     }
 
     static String marker(java.util.UUID subjectId) {
@@ -30,7 +33,7 @@ class ConfluenceRenderer {
     }
 
     String contract(Mapping mapping, String appUrl) {
-        var html = new StringBuilder(notice(marker(mapping.getId()), appUrl));
+        var html = new StringBuilder(notice(marker(mapping.getKey()), appUrl));
         html.append("<h2>Überblick</h2>").append("<table><tbody>");
         row(html, "Name", mapping.getName());
         row(html, "Version", mapping.getContractVersion());
@@ -58,7 +61,7 @@ class ConfluenceRenderer {
     }
 
     String product(DataProduct product, String appUrl) {
-        var html = new StringBuilder(notice(marker(product.getId()), appUrl));
+        var html = new StringBuilder(notice(marker(product.getKey()), appUrl));
         html.append("<h2>Überblick</h2><table><tbody>");
         row(html, "Name", product.getName());
         row(html, "Version", product.getProductVersion());
@@ -72,7 +75,7 @@ class ConfluenceRenderer {
         return html.toString();
     }
 
-    private static void ports(StringBuilder html, String title, List<DataProductPort> ports) {
+    private void ports(StringBuilder html, String title, List<DataProductPort> ports) {
         html.append("<h2>").append(title).append("</h2>");
         if (ports.isEmpty()) {
             html.append("<p>Keine.</p>");
@@ -82,7 +85,8 @@ class ConfluenceRenderer {
         for (var port : ports) {
             html.append("<tr>");
             cell(html, port.getName());
-            cell(html, port.getContract() == null ? null : port.getContract().getContractName());
+            cell(html, port.getContractKey() == null ? null
+                    : mappings.findFirstByContractKey(port.getContractKey()).map(Mapping::getContractName).orElse(null));
             cell(html, port.getContractVersion());
             html.append("</tr>");
         }

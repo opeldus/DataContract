@@ -7,6 +7,7 @@ import {
   type ProductDetail,
   reviewActions,
 } from "./api";
+import { ConflictPanel, ScopeBadge } from "./ConflictPanel";
 import { IntegrationPanel } from "./IntegrationPanel";
 import { PRODUCT_TYPES, STATUS_LABELS } from "./labels";
 import { PortTable } from "./PortTable";
@@ -28,8 +29,13 @@ export function ProductEditor({ id, me, onBack, onDirtyChange }: Props) {
   const [preview, setPreview] = useState<PreviewFile[] | null>(null);
 
   useEffect(() => {
-    api.getProduct(id).then(setProduct).catch((cause: Error) => setError(cause.message));
-    api.contracts().then(setContracts).catch((cause: Error) => setError(cause.message));
+    api
+      .getProduct(id)
+      .then((loaded) => {
+        setProduct(loaded);
+        return api.contracts(loaded.releaseId).then(setContracts);
+      })
+      .catch((cause: Error) => setError(cause.message));
   }, [id]);
 
   useEffect(() => {
@@ -80,6 +86,7 @@ export function ProductEditor({ id, me, onBack, onDirtyChange }: Props) {
         <button type="button" onClick={onBack}>← Übersicht</button>
         <h1>{current.name}</h1>
         <span className={`status status-${current.status}`}>{STATUS_LABELS[current.status]}</span>
+        <ScopeBadge item={current} />
         <span className="spacer" />
         {dirty && <span className="meta">Nicht gespeichert</span>}
         {editable && (
@@ -95,6 +102,17 @@ export function ProductEditor({ id, me, onBack, onDirtyChange }: Props) {
       </header>
 
       {error && <p role="alert" className="error">{error}</p>}
+
+      <ConflictPanel
+        conflicts={current.conflicts}
+        editable={editable}
+        dirty={dirty}
+        onResolve={(conflictId, takeTheirs) =>
+          run(async () =>
+            applyServerState(await reviewActions<ProductDetail>(`/api/products/${current.id}`).resolveConflict(conflictId, takeTheirs)),
+          )
+        }
+      />
 
       <section className="panel" aria-label="Kopfdaten">
         <div className="form-grid">
@@ -218,7 +236,7 @@ export function ProductEditor({ id, me, onBack, onDirtyChange }: Props) {
         />
       </div>
 
-      <IntegrationPanel subjectId={current.id} revision={current.version} me={me} />
+      <IntegrationPanel subjectId={current.key} revision={current.version} me={me} />
     </main>
   );
 }

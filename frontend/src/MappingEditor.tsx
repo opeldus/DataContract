@@ -10,6 +10,7 @@ import {
   ruleIndexOf,
 } from "./api";
 import { ChangePanel, DdlStatusLine } from "./ChangePanel";
+import { ConflictPanel, ScopeBadge } from "./ConflictPanel";
 import { IntegrationPanel } from "./IntegrationPanel";
 import { STATUS_LABELS } from "./labels";
 import { ReviewPanel } from "./ReviewPanel";
@@ -93,6 +94,7 @@ export function MappingEditor({ id, me, onBack, onOpenProduct, onDirtyChange }: 
         <button type="button" onClick={onBack}>← Übersicht</button>
         <h1>{current.name}</h1>
         <span className={`status status-${current.status}`}>{STATUS_LABELS[current.status]}</span>
+        <ScopeBadge item={current} />
         <span className="spacer" />
         {dirty && <span className="meta">Nicht gespeichert</span>}
         {editable && (
@@ -109,6 +111,15 @@ export function MappingEditor({ id, me, onBack, onOpenProduct, onDirtyChange }: 
 
       {error && <p role="alert" className="error">{error}</p>}
       {notice && <p role="status" className="notice">{notice}</p>}
+
+      <ConflictPanel
+        conflicts={current.conflicts}
+        editable={editable}
+        dirty={dirty}
+        onResolve={(id, takeTheirs) =>
+          run(async () => applyServerState(await reviewActions<MappingDetail>(`/api/mappings/${current.id}`).resolveConflict(id, takeTheirs)))
+        }
+      />
 
       <section className="panel" aria-label="Kopfdaten">
         <div className="form-grid">
@@ -210,6 +221,7 @@ export function MappingEditor({ id, me, onBack, onOpenProduct, onDirtyChange }: 
           issues={current.issues}
           editable={editable}
           selectedRuleId={selectedRuleId}
+          release={current.releaseId}
           onChange={(rules) => edit({ rules })}
           onSelectRule={setSelectedRuleId}
         />
@@ -270,7 +282,7 @@ export function MappingEditor({ id, me, onBack, onOpenProduct, onDirtyChange }: 
         />
       </div>
 
-      <IntegrationPanel subjectId={current.id} revision={current.version} me={me} />
+      <IntegrationPanel subjectId={current.key} revision={current.version} me={me} />
 
       <section className="panel" aria-label="Verwendet von">
         <h2>Verwendet von</h2>

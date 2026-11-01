@@ -18,6 +18,8 @@ export const EVENT_LABELS: Record<string, string> = {
   APPROVED: "hat freigegeben",
   REOPENED: "hat wieder geöffnet",
   PUBLISHED: "hat nach Git veröffentlicht",
+  FORKED: "hat ins Release übernommen",
+  FORWARD_MERGED: "(Automatik) hat Änderungen aus dem Basisrelease übernommen",
 };
 
 export const IMPACT_LABELS: Record<ChangeImpact, string> = {

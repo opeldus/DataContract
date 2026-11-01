@@ -1,5 +1,6 @@
 package de.opeldus.datacontract.mapping;
 
+import de.opeldus.datacontract.release.Scope;
 import de.opeldus.datacontract.review.ReviewStatus;
 import de.opeldus.datacontract.review.ReviewSubject;
 import jakarta.persistence.CascadeType;
@@ -24,6 +25,10 @@ public class Mapping implements ReviewSubject {
     @Id
     private UUID id = UUID.randomUUID();
 
+    private UUID contractKey = id;
+    private UUID releaseId;
+    private String scopeKey = Scope.MAIN;
+
     private String name;
     private String contractName;
     private String contractVersion;
@@ -36,6 +41,10 @@ public class Mapping implements ReviewSubject {
     private ReviewStatus status = ReviewStatus.DRAFT;
 
     private String publishedVersion;
+
+    /** In a release: the state of the base this copy last took over, which is the common ancestor for merging. */
+    private String upstreamVersion;
+
     private String publishedCommit;
 
     @Column(updatable = false)
@@ -55,11 +64,62 @@ public class Mapping implements ReviewSubject {
 
     protected Mapping() {}
 
-    public Mapping(String name, String contractName, String createdBy) {
+    public Mapping(String name, String contractName, String createdBy, UUID releaseId) {
         this.name = name;
         this.contractName = contractName;
         this.contractVersion = "1.0.0";
         this.createdBy = createdBy;
+        this.releaseId = releaseId;
+        this.scopeKey = Scope.of(releaseId);
+    }
+
+    /** A copy to work on in a release; it keeps the identity of the contract and of each rule. */
+    public Mapping forkInto(UUID targetRelease, String actor) {
+        var fork = new Mapping(name, contractName, actor, targetRelease);
+        fork.contractKey = contractKey;
+        fork.contractVersion = contractVersion;
+        fork.domain = domain;
+        fork.description = description;
+        fork.targetTable = targetTable;
+        fork.ownerTeam = ownerTeam;
+        fork.publishedVersion = publishedVersion;
+        fork.publishedCommit = publishedCommit;
+        fork.upstreamVersion = publishedVersion;
+        int order = 0;
+        for (var rule : rules) {
+            fork.rules.add(rule.copyFor(fork, order++));
+        }
+        return fork;
+    }
+
+    public void archive() {
+        scopeKey = Scope.archived(id);
+        releaseId = null;
+    }
+
+    public void moveToMainline() {
+        scopeKey = Scope.MAIN;
+        releaseId = null;
+    }
+
+    @Override
+    public void rebaseOn(String version, String commit) {
+        // Without an own publish in the release, the base's new state is also what changes are compared against.
+        if (java.util.Objects.equals(publishedVersion, upstreamVersion)) {
+            publishedVersion = version;
+            publishedCommit = commit;
+        }
+        upstreamVersion = version;
+    }
+
+    @Override
+    public String getUpstreamVersion() {
+        return upstreamVersion;
+    }
+
+    @Override
+    public boolean isArchived() {
+        return Scope.isArchived(scopeKey);
     }
 
     @Override
@@ -75,6 +135,9 @@ public class Mapping implements ReviewSubject {
     }
 
     @Override public UUID getId() { return id; }
+    @Override public UUID getKey() { return contractKey; }
+    @Override public UUID getReleaseId() { return releaseId; }
+    public String getScopeKey() { return scopeKey; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getContractName() { return contractName; }
@@ -90,7 +153,7 @@ public class Mapping implements ReviewSubject {
     public void setOwnerTeam(String ownerTeam) { this.ownerTeam = ownerTeam; }
     @Override public ReviewStatus getStatus() { return status; }
     @Override public void setStatus(ReviewStatus status) { this.status = status; }
-    public String getPublishedVersion() { return publishedVersion; }
+    @Override public String getPublishedVersion() { return publishedVersion; }
     public String getPublishedCommit() { return publishedCommit; }
     @Override public String getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }

@@ -10,20 +10,21 @@ const CHECK_LABELS: Record<TraceEntry["check"], string> = {
 };
 
 interface Props {
+  release: string | null;
   onOpenMapping: (id: string) => void;
   onOpenProduct: (id: string) => void;
 }
 
-export function RequirementTrace({ onOpenMapping, onOpenProduct }: Props) {
+export function RequirementTrace({ release, onOpenMapping, onOpenProduct }: Props) {
   const [trace, setTrace] = useState<Trace | null>(null);
   const [status, setStatus] = useState<IntegrationStatus | null>(null);
   const [filter, setFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.trace().then(setTrace).catch((cause: Error) => setError(cause.message));
+    api.trace(release).then(setTrace).catch((cause: Error) => setError(cause.message));
     api.integrationStatus().then(setStatus).catch((cause: Error) => setError(cause.message));
-  }, []);
+  }, [release]);
 
   const entries = useMemo(() => {
     const query = filter.trim().toLowerCase();

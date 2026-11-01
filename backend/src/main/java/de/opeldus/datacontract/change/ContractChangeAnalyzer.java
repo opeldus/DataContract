@@ -7,11 +7,11 @@ import static de.opeldus.datacontract.change.ChangeImpact.DOCUMENTATION;
 import de.opeldus.datacontract.change.ChangeReport.AffectedProduct;
 import de.opeldus.datacontract.change.ChangeReport.Change;
 import de.opeldus.datacontract.change.ContractSnapshot.Rule;
-import de.opeldus.datacontract.mapping.ContractVersion;
-import de.opeldus.datacontract.mapping.ContractVersionRepository;
+import de.opeldus.datacontract.mapping.PublishedVersion;
+import de.opeldus.datacontract.mapping.PublishedVersionRepository;
 import de.opeldus.datacontract.mapping.Mapping;
-import de.opeldus.datacontract.product.DataProductRepository;
 import de.opeldus.datacontract.product.PortDirection;
+import de.opeldus.datacontract.release.ReleaseScopes;
 import de.opeldus.datacontract.review.ReviewStatus;
 import de.opeldus.datacontract.validation.ColumnType;
 import java.util.ArrayDeque;
@@ -28,25 +28,25 @@ import org.springframework.stereotype.Component;
 @Component
 public class ContractChangeAnalyzer {
 
-    private final ContractVersionRepository versions;
-    private final DataProductRepository products;
+    private final PublishedVersionRepository versions;
+    private final ReleaseScopes scopes;
 
-    public ContractChangeAnalyzer(ContractVersionRepository versions, DataProductRepository products) {
+    public ContractChangeAnalyzer(PublishedVersionRepository versions, ReleaseScopes scopes) {
         this.versions = versions;
-        this.products = products;
+        this.scopes = scopes;
     }
 
     public ChangeReport analyze(Mapping mapping) {
         var published = mapping.getPublishedVersion();
-        var affected = affectedProducts(mapping.getId());
+        var affected = affectedProducts(mapping.getKey(), mapping.getReleaseId());
         if (published == null) {
             return new ChangeReport(null, true, List.of(), affected);
         }
         if (mapping.getStatus() == ReviewStatus.PUBLISHED) {
             return new ChangeReport(published, true, List.of(), affected);
         }
-        var snapshot = versions.findById(new ContractVersion.Key(mapping.getId(), published))
-                .map(ContractVersion::getSnapshot)
+        var snapshot = versions.findById(new PublishedVersion.Key(mapping.getKey(), published))
+                .map(PublishedVersion::getSnapshot)
                 .orElse(null);
         if (snapshot == null) {
             return new ChangeReport(published, false, List.of(), affected);
@@ -176,8 +176,8 @@ public class ContractChangeAnalyzer {
     }
 
     /** Follows the data flow from the contract through products and the contracts they produce. */
-    private List<AffectedProduct> affectedProducts(UUID contractId) {
-        var allProducts = products.findAll();
+    private List<AffectedProduct> affectedProducts(UUID contractId, UUID releaseId) {
+        var allProducts = scopes.effectiveProducts(releaseId).values();
         var affected = new ArrayList<AffectedProduct>();
         var seenProducts = new HashSet<UUID>();
         var seenContracts = new HashSet<UUID>();
@@ -188,17 +188,17 @@ public class ContractChangeAnalyzer {
             var current = queue.poll();
             for (var product : allProducts) {
                 var port = product.ports(PortDirection.INPUT).stream()
-                        .filter(input -> input.getContract() != null && input.getContract().getId().equals(current))
+                        .filter(input -> current.equals(input.getContractKey()))
                         .findFirst();
-                if (port.isEmpty() || !seenProducts.add(product.getId())) {
+                if (port.isEmpty() || !seenProducts.add(product.getKey())) {
                     continue;
                 }
                 var direct = current.equals(contractId);
                 affected.add(new AffectedProduct(product.getId(), product.getProductName(), product.getName(),
                         direct ? port.get().getContractVersion() : null, direct));
                 for (var output : product.ports(PortDirection.OUTPUT)) {
-                    if (output.getContract() != null && seenContracts.add(output.getContract().getId())) {
-                        queue.add(output.getContract().getId());
+                    if (output.getContractKey() != null && seenContracts.add(output.getContractKey())) {
+                        queue.add(output.getContractKey());
                     }
                 }
             }

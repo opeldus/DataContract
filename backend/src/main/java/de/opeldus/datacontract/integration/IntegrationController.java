@@ -3,8 +3,7 @@ package de.opeldus.datacontract.integration;
 import static de.opeldus.datacontract.common.ApiExceptions.conflict;
 import static de.opeldus.datacontract.common.ApiExceptions.notFound;
 
-import de.opeldus.datacontract.mapping.MappingRepository;
-import de.opeldus.datacontract.product.DataProductRepository;
+import de.opeldus.datacontract.release.ReleaseScopes;
 import de.opeldus.datacontract.review.ReviewStatus;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -29,19 +28,17 @@ public class IntegrationController {
     private final RequirementDirectory requirements;
     private final IntegrationTaskRepository tasks;
     private final IntegrationPageRepository pages;
-    private final MappingRepository mappings;
-    private final DataProductRepository products;
+    private final ReleaseScopes scopes;
     private final List<DocumentationPublisher> documentation;
     private final String publicUrl;
 
     IntegrationController(RequirementDirectory requirements, IntegrationTaskRepository tasks,
-            IntegrationPageRepository pages, MappingRepository mappings, DataProductRepository products,
+            IntegrationPageRepository pages, ReleaseScopes scopes,
             List<DocumentationPublisher> documentation, @Value("${app.public-url:}") String publicUrl) {
         this.requirements = requirements;
         this.tasks = tasks;
         this.pages = pages;
-        this.mappings = mappings;
-        this.products = products;
+        this.scopes = scopes;
         this.documentation = documentation;
         this.publicUrl = publicUrl;
     }
@@ -79,11 +76,11 @@ public class IntegrationController {
 
     @GetMapping("/requirements")
     @Transactional(readOnly = true)
-    public Trace trace() {
+    public Trace trace(@RequestParam(required = false) UUID release) {
         var rulesByKey = new TreeMap<String, List<TracedRule>>();
         var contractsByKey = new TreeMap<String, List<UUID>>();
         int withoutRequirement = 0;
-        for (var mapping : mappings.findAll()) {
+        for (var mapping : scopes.effectiveMappings(release).values()) {
             for (var rule : mapping.getRules()) {
                 var key = rule.getRequirementKey();
                 if (key == null) {
@@ -93,17 +90,17 @@ public class IntegrationController {
                 rulesByKey.computeIfAbsent(key, ignored -> new ArrayList<>()).add(new TracedRule(mapping.getId(),
                         mapping.getName(), mapping.getContractName(), mapping.getContractVersion(), mapping.getStatus(),
                         rule.getTargetColumn()));
-                contractsByKey.computeIfAbsent(key, ignored -> new ArrayList<>()).add(mapping.getId());
+                contractsByKey.computeIfAbsent(key, ignored -> new ArrayList<>()).add(mapping.getKey());
             }
         }
-        var allProducts = products.findAll();
+        var allProducts = scopes.effectiveProducts(release).values();
         var entries = new ArrayList<TraceEntry>();
         for (var entry : rulesByKey.entrySet()) {
             var key = entry.getKey();
             var contracts = contractsByKey.get(key);
             var traced = allProducts.stream()
-                    .filter(product -> product.getPorts().stream().anyMatch(port -> port.getContract() != null
-                            && contracts.contains(port.getContract().getId())))
+                    .filter(product -> product.getPorts().stream().anyMatch(port -> port.getContractKey() != null
+                            && contracts.contains(port.getContractKey())))
                     .map(product -> new TracedProduct(product.getId(), product.getProductName(), product.getName()))
                     .toList();
             var issue = requirements.find(key).orElse(null);

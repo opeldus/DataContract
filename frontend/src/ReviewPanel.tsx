@@ -96,7 +96,7 @@ export function ReviewPanel<T extends Reviewable>({
             Nach Git veröffentlichen
           </button>
         )}
-        {(isEditor || isReviewer) &&
+        {(isEditor || isReviewer) && !item.archived &&
           (item.status === "IN_REVIEW" || item.status === "APPROVED" || item.status === "PUBLISHED") && (
             <button type="button" onClick={() => act(actions.reopen)}>
               Wieder öffnen

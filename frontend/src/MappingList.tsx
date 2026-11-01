@@ -4,23 +4,34 @@ import { STATUS_LABELS, toTechnicalName } from "./labels";
 
 interface Props {
   me: Me;
+  release: string | null;
   onOpen: (id: string) => void;
 }
 
-export function MappingList({ me, onOpen }: Props) {
+export function MappingList({ me, release, onOpen }: Props) {
   const [mappings, setMappings] = useState<MappingSummary[] | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.listMappings().then(setMappings).catch((cause: Error) => setError(cause.message));
-  }, []);
+    api.listMappings(release).then(setMappings).catch((cause: Error) => setError(cause.message));
+  }, [release]);
+
+  async function takeOver(key: string) {
+    setError(null);
+    try {
+      const fork = await api.forkMapping(release!, key);
+      onOpen(fork.id);
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  }
 
   async function create(event: FormEvent) {
     event.preventDefault();
     setError(null);
     try {
-      const created = await api.createMapping(name.trim(), toTechnicalName(name));
+      const created = await api.createMapping(name.trim(), toTechnicalName(name), release);
       onOpen(created.id);
     } catch (cause) {
       setError((cause as Error).message);
@@ -54,6 +65,7 @@ export function MappingList({ me, onOpen }: Props) {
                 <th>Team</th>
                 <th>Regeln</th>
                 <th>Geändert</th>
+                {release && <th>Stand aus</th>}
               </tr>
             </thead>
             <tbody>
@@ -68,6 +80,20 @@ export function MappingList({ me, onOpen }: Props) {
                   <td>{mapping.ownerTeam ?? "–"}</td>
                   <td>{mapping.ruleCount}</td>
                   <td>{new Date(mapping.updatedAt).toLocaleString("de-DE")}</td>
+                  {release && (
+                    <td>
+                      {mapping.inherited ? (
+                        <span className="inherited">
+                          {mapping.originRelease ?? "main"}
+                          {me.roles.includes("EDITOR") && mapping.status === "PUBLISHED" && (
+                            <button type="button" onClick={() => takeOver(mapping.key)}>Ins Release übernehmen</button>
+                          )}
+                        </span>
+                      ) : (
+                        "diesem Release"
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

@@ -41,11 +41,12 @@ interface Props {
   issues: ValidationIssue[];
   editable: boolean;
   selectedRuleId: string | null;
+  release: string | null;
   onChange: (rules: Rule[]) => void;
   onSelectRule: (ruleId: string | null) => void;
 }
 
-export function RuleGrid({ rules, issues, editable, selectedRuleId, onChange, onSelectRule }: Props) {
+export function RuleGrid({ rules, issues, editable, selectedRuleId, release, onChange, onSelectRule }: Props) {
   function setField<F extends Field>(index: number, field: F, value: Rule[F]) {
     onChange(rules.map((rule, i) => (i === index ? { ...rule, [field]: value } : rule)));
   }
@@ -134,9 +135,9 @@ export function RuleGrid({ rules, issues, editable, selectedRuleId, onChange, on
                   disabled={!editable}
                   value={rule.sourceDataset ?? ""}
                   search={async (query) =>
-                    (await api.searchDatasets(query)).map((dataset) => ({
+                    (await api.searchDatasets(query, release)).map((dataset) => ({
                       value: dataset.name,
-                      hint: dataset.platform,
+                      hint: dataset.plannedIn ? `geplant: ${dataset.plannedIn}` : (dataset.platform ?? undefined),
                     }))
                   }
                   onChange={(value) => setField(index, "sourceDataset", value || null)}
@@ -150,9 +151,9 @@ export function RuleGrid({ rules, issues, editable, selectedRuleId, onChange, on
                   value={rule.sourceColumn ?? ""}
                   search={async (query) =>
                     rule.sourceDataset
-                      ? (await api.searchColumns(rule.sourceDataset, query)).map((column) => ({
+                      ? (await api.searchColumns(rule.sourceDataset, query, release)).map((column) => ({
                           value: column.name,
-                          hint: column.nativeType ?? undefined,
+                          hint: column.plannedIn ? `geplant: ${column.plannedIn}` : (column.nativeType ?? undefined),
                         }))
                       : []
                   }

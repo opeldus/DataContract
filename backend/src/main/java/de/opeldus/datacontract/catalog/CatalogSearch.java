@@ -22,14 +22,14 @@ public class CatalogSearch {
     @Transactional(readOnly = true)
     public List<DatasetSuggestion> searchDatasets(String query) {
         return datasets.search(escape(query), PageRequest.of(0, MAX_SUGGESTIONS)).stream()
-                .map(dataset -> new DatasetSuggestion(dataset.qualifiedName, dataset.platform))
+                .map(dataset -> new DatasetSuggestion(dataset.qualifiedName, dataset.platform, null))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<ColumnSuggestion> searchColumns(String dataset, String query) {
         return columns.search(dataset, escape(query), PageRequest.of(0, MAX_SUGGESTIONS)).stream()
-                .map(column -> new ColumnSuggestion(column.name, column.nativeType, column.nullable, column.description))
+                .map(column -> new ColumnSuggestion(column.name, column.nativeType, column.nullable, column.description, null))
                 .toList();
     }
 
@@ -39,14 +39,15 @@ public class CatalogSearch {
 
     public Optional<ColumnSuggestion> findColumn(String dataset, String name) {
         return columns.find(dataset, name)
-                .map(column -> new ColumnSuggestion(column.name, column.nativeType, column.nullable, column.description));
+                .map(column -> new ColumnSuggestion(column.name, column.nativeType, column.nullable, column.description, null));
     }
 
     private static String escape(String query) {
         return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
-    public record DatasetSuggestion(String name, String platform) {}
+    /** {@code plannedIn} names the contract that is going to create this, if it is not live yet. */
+    public record DatasetSuggestion(String name, String platform, String plannedIn) {}
 
-    public record ColumnSuggestion(String name, String nativeType, boolean nullable, String description) {}
+    public record ColumnSuggestion(String name, String nativeType, boolean nullable, String description, String plannedIn) {}
 }

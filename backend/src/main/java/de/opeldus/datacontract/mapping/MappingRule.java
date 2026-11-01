@@ -16,6 +16,9 @@ public class MappingRule {
     @Id
     private UUID id = UUID.randomUUID();
 
+    /** Shared by the copies of this rule across releases, which is how changes are matched up. */
+    private UUID lineageId = id;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "mapping_id")
     private Mapping mapping;
@@ -37,6 +40,24 @@ public class MappingRule {
         this.mapping = mapping;
     }
 
+    MappingRule copyFor(Mapping target, int order) {
+        var copy = new MappingRule(target);
+        copy.lineageId = lineageId;
+        copy.sortOrder = order;
+        copy.sourceDataset = sourceDataset;
+        copy.sourceColumn = sourceColumn;
+        copy.targetColumn = targetColumn;
+        copy.targetType = targetType;
+        copy.required = required;
+        copy.primaryKey = primaryKey;
+        copy.transformation = transformation;
+        copy.description = description;
+        copy.requirementKey = requirementKey;
+        return copy;
+    }
+
+    public void setLineageId(UUID lineageId) { this.lineageId = lineageId; }
+    public UUID getLineageId() { return lineageId; }
     public UUID getId() { return id; }
     public int getSortOrder() { return sortOrder; }
     public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }

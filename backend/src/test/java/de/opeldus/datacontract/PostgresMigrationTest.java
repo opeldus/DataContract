@@ -44,7 +44,7 @@ class PostgresMigrationTest {
 
     @Test
     void schemaMatchesEntitiesOnPostgres() {
-        var created = mappings.create(new CreateMappingRequest("Kunden", "kunden"), "anna");
+        var created = mappings.create(new CreateMappingRequest("Kunden", "kunden", null), "anna");
 
         assertThat(mappings.get(created.id()).contractName()).isEqualTo("kunden");
         assertThat(mappings.get(created.id()).events()).hasSize(1);

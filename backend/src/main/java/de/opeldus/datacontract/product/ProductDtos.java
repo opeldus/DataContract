@@ -1,6 +1,7 @@
 package de.opeldus.datacontract.product;
 
 import de.opeldus.datacontract.mapping.MappingDtos.EventDto;
+import de.opeldus.datacontract.release.ReleaseDtos.ConflictView;
 import de.opeldus.datacontract.review.ReviewStatus;
 import de.opeldus.datacontract.validation.ValidationIssue;
 import jakarta.validation.Valid;
@@ -19,7 +20,8 @@ public final class ProductDtos {
     public record CreateProductRequest(
             @NotBlank @Size(max = 200) String name,
             @NotBlank @Pattern(regexp = "[a-z0-9][a-z0-9_-]{0,99}",
-                    message = "nur Kleinbuchstaben, Ziffern, _ und - erlaubt") String productName) {}
+                    message = "nur Kleinbuchstaben, Ziffern, _ und - erlaubt") String productName,
+            UUID releaseId) {}
 
     public record UpdateProductRequest(
             long version,
@@ -35,37 +37,25 @@ public final class ProductDtos {
             UUID id,
             @NotNull PortDirection direction,
             @Size(max = 200) String name,
-            UUID contractMappingId,
+            UUID contractKey,
             String contractName,
-            @Size(max = 50) String contractVersion) {
+            @Size(max = 50) String contractVersion) {}
 
-        static PortDto from(DataProductPort port) {
-            var contract = port.getContract();
-            return new PortDto(port.getId(), port.getDirection(), port.getName(),
-                    contract == null ? null : contract.getId(), contract == null ? null : contract.getContractName(),
-                    port.getContractVersion());
-        }
-    }
-
+    /** {@code inherited} means the state comes from {@code originRelease} (null: the mainline), not from the release asked for. */
     public record ProductSummary(
-            UUID id, String name, String productName, String productVersion, ReviewStatus status, String ownerTeam,
-            int inputPorts, int outputPorts, Instant updatedAt) {
-
-        static ProductSummary from(DataProduct product) {
-            return new ProductSummary(product.getId(), product.getName(), product.getProductName(),
-                    product.getProductVersion(), product.getStatus(), product.getOwnerTeam(),
-                    product.ports(PortDirection.INPUT).size(), product.ports(PortDirection.OUTPUT).size(),
-                    product.getUpdatedAt());
-        }
-    }
+            UUID id, UUID key, String name, String productName, String productVersion, ReviewStatus status,
+            String ownerTeam, int inputPorts, int outputPorts, Instant updatedAt, boolean inherited,
+            String originRelease) {}
 
     public record ProductDetail(
-            UUID id, String name, String productName, String productVersion, String domain, String productType,
+            UUID id, UUID key, UUID releaseId, String releaseName, boolean archived, String name, String productName, String productVersion, String domain, String productType,
             String purpose, String ownerTeam, ReviewStatus status, String publishedVersion, String publishedCommit,
             String createdBy, Instant updatedAt, long version, List<PortDto> ports, List<ValidationIssue> issues,
-            List<EventDto> events, String contentHash) {}
+            List<EventDto> events, String contentHash, List<ConflictView> conflicts) {}
 
-    public record ContractOption(UUID mappingId, String name, String domain, List<String> publishedVersions) {}
+    /** {@code plannedVersion} is set if this release itself is about to publish that version. */
+    public record ContractOption(UUID contractKey, String name, String domain, List<String> publishedVersions,
+            String plannedVersion) {}
 
     public record ContractConsumer(
             UUID productId, String productName, String productTitle, ReviewStatus productStatus,

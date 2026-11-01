@@ -26,7 +26,7 @@ public class OdpsProductGenerator {
         var document = new LinkedHashMap<String, Object>();
         document.put("apiVersion", API_VERSION);
         document.put("kind", "DataProduct");
-        document.put("id", "urn:dataproduct:" + product.getId());
+        document.put("id", "urn:dataproduct:" + product.getKey());
         document.put("name", product.getProductName());
         document.put("version", product.getProductVersion());
         document.put("status", "active");
@@ -51,9 +51,9 @@ public class OdpsProductGenerator {
     private List<Map<String, Object>> inputContracts(List<DataProductPort> inputPorts) {
         var contracts = new ArrayList<Map<String, Object>>();
         for (var port : inputPorts) {
-            if (port.getContract() != null && port.getContractVersion() != null) {
+            if (port.getContractKey() != null && port.getContractVersion() != null) {
                 var contract = new LinkedHashMap<String, Object>();
-                contract.put("id", OdcsContractGenerator.contractId(port.getContract().getId()));
+                contract.put("id", OdcsContractGenerator.contractId(port.getContractKey()));
                 contract.put("version", port.getContractVersion());
                 contracts.add(contract);
             }
@@ -69,11 +69,11 @@ public class OdpsProductGenerator {
 
     private Map<String, Object> port(DataProductPort port) {
         var document = new LinkedHashMap<String, Object>();
-        document.put("id", port.getId().toString());
+        document.put("id", port.getLineageId().toString());
         document.put("name", port.getName() != null ? port.getName() : "");
         putIfPresent(document, "version", port.getContractVersion());
-        if (port.getContract() != null) {
-            document.put("contractId", OdcsContractGenerator.contractId(port.getContract().getId()));
+        if (port.getContractKey() != null) {
+            document.put("contractId", OdcsContractGenerator.contractId(port.getContractKey()));
         }
         return document;
     }

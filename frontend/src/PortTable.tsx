@@ -22,7 +22,7 @@ export function PortTable({ direction, title, hint, ports, contracts, issues, ed
         .slice(0, 20)
         .map((contract) => ({
           value: contract.name,
-          hint: contract.publishedVersions[0] ?? "nicht veröffentlicht",
+          hint: contract.publishedVersions[0] ?? (contract.plannedVersion ? `geplant: ${contract.plannedVersion}` : "nicht veröffentlicht"),
         })),
     [contracts],
   );
@@ -35,8 +35,8 @@ export function PortTable({ direction, title, hint, ports, contracts, issues, ed
     const contract = contracts.find((option) => option.name === name);
     update(index, {
       contractName: name || null,
-      contractMappingId: contract?.mappingId ?? null,
-      contractVersion: contract?.publishedVersions[0] ?? null,
+      contractKey: contract?.contractKey ?? null,
+      contractVersion: contract?.plannedVersion ?? contract?.publishedVersions[0] ?? null,
     });
   }
 
@@ -60,7 +60,7 @@ export function PortTable({ direction, title, hint, ports, contracts, issues, ed
             onClick={() =>
               onChange([
                 ...ports,
-                { id: null, direction, name: null, contractMappingId: null, contractName: null, contractVersion: null },
+                { id: null, direction, name: null, contractKey: null, contractName: null, contractVersion: null },
               ])
             }
           >
@@ -82,8 +82,9 @@ export function PortTable({ direction, title, hint, ports, contracts, issues, ed
             </thead>
             <tbody>
               {rows.map(({ port, index }, rowIndex) => {
-                const versions =
-                  contracts.find((contract) => contract.mappingId === port.contractMappingId)?.publishedVersions ?? [];
+                const option = contracts.find((contract) => contract.contractKey === port.contractKey);
+                const versions = option?.publishedVersions ?? [];
+                const planned = option?.plannedVersion ?? null;
                 const label = `${title} ${rowIndex + 1}`;
                 return (
                   <tr key={port.id ?? `new-${index}`}>
@@ -107,12 +108,13 @@ export function PortTable({ direction, title, hint, ports, contracts, issues, ed
                     <td className={cellClass(port, "contractVersion")}>
                       <select
                         aria-label={`Version, ${label}`}
-                        disabled={!editable || versions.length === 0}
+                        disabled={!editable || (versions.length === 0 && !planned)}
                         value={port.contractVersion ?? ""}
                         onChange={(event) => update(index, { contractVersion: event.target.value || null })}
                       >
-                        {versions.length === 0 && <option value="">–</option>}
-                        {port.contractVersion && !versions.includes(port.contractVersion) && (
+                        {versions.length === 0 && !planned && <option value="">–</option>}
+                        {planned && <option value={planned}>{planned} (geplant)</option>}
+                        {port.contractVersion && port.contractVersion !== planned && !versions.includes(port.contractVersion) && (
                           <option value={port.contractVersion}>{port.contractVersion}</option>
                         )}
                         {versions.map((version) => (

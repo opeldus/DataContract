@@ -15,17 +15,23 @@ import de.opeldus.datacontract.mapping.MappingDtos.MappingSummary;
 import de.opeldus.datacontract.mapping.MappingDtos.PreviewFile;
 import de.opeldus.datacontract.mapping.MappingDtos.RuleDto;
 import de.opeldus.datacontract.mapping.MappingDtos.UpdateMappingRequest;
+import de.opeldus.datacontract.release.MergeConflict;
+import de.opeldus.datacontract.release.MergeConflictRepository;
+import de.opeldus.datacontract.release.ReleaseDtos.ConflictView;
+import de.opeldus.datacontract.release.ReleaseScopes;
+import de.opeldus.datacontract.release.ReleaseState;
 import de.opeldus.datacontract.review.ReviewEvent;
 import de.opeldus.datacontract.review.ReviewEventRepository;
 import de.opeldus.datacontract.review.ReviewEventType;
 import de.opeldus.datacontract.validation.MappingValidator;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,21 +44,31 @@ public class MappingService {
     private final ArtifactService artifacts;
     private final ExcelMappingImporter excelImporter;
     private final ContractChangeAnalyzer changes;
+    private final ReleaseScopes scopes;
+    private final MergeConflictRepository conflicts;
 
     public MappingService(MappingRepository mappings, ReviewEventRepository events, MappingValidator validator,
-            ArtifactService artifacts, ExcelMappingImporter excelImporter, ContractChangeAnalyzer changes) {
+            ArtifactService artifacts, ExcelMappingImporter excelImporter, ContractChangeAnalyzer changes,
+            ReleaseScopes scopes, MergeConflictRepository conflicts) {
         this.mappings = mappings;
         this.events = events;
         this.validator = validator;
         this.artifacts = artifacts;
         this.excelImporter = excelImporter;
         this.changes = changes;
+        this.scopes = scopes;
+        this.conflicts = conflicts;
     }
 
     @Transactional(readOnly = true)
-    public List<MappingSummary> list() {
-        return mappings.findAll(Sort.by(Sort.Direction.DESC, "updatedAt")).stream()
-                .map(MappingSummary::from)
+    public List<MappingSummary> list(UUID releaseId) {
+        return scopes.effectiveMappings(releaseId).values().stream()
+                .sorted(Comparator.comparing(Mapping::getUpdatedAt).reversed())
+                .map(mapping -> new MappingSummary(mapping.getId(), mapping.getKey(), mapping.getName(),
+                        mapping.getContractName(), mapping.getContractVersion(), mapping.getStatus(),
+                        mapping.getOwnerTeam(), mapping.getRules().size(), mapping.getUpdatedAt(),
+                        !Objects.equals(mapping.getReleaseId(), releaseId),
+                        scopes.releaseName(mapping.getReleaseId()).orElse(null)))
                 .toList();
     }
 
@@ -61,7 +77,10 @@ public class MappingService {
         if (mappings.existsByContractName(request.contractName())) {
             throw conflict("Der Contract-Name '" + request.contractName() + "' ist bereits vergeben.");
         }
-        var mapping = mappings.saveAndFlush(new Mapping(request.name(), request.contractName(), actor));
+        if (request.releaseId() != null && scopes.find(request.releaseId()).getState() != ReleaseState.OPEN) {
+            throw conflict("Dieses Release ist bereits abgeschlossen.");
+        }
+        var mapping = mappings.saveAndFlush(new Mapping(request.name(), request.contractName(), actor, request.releaseId()));
         events.save(new ReviewEvent(mapping.getId(), ReviewEventType.CREATED, actor));
         return detail(mapping);
     }
@@ -121,12 +140,16 @@ public class MappingService {
         var history = events.findBySubjectIdOrderByCreatedAtAsc(mapping.getId()).stream()
                 .map(EventDto::from)
                 .toList();
-        return new MappingDetail(mapping.getId(), mapping.getName(), mapping.getContractName(),
+        var open = conflicts.findBySubjectIdAndStateOrderByCreatedAtAsc(mapping.getId(), MergeConflict.State.OPEN).stream()
+                .map(ConflictView::from)
+                .toList();
+        return new MappingDetail(mapping.getId(), mapping.getKey(), mapping.getReleaseId(),
+                scopes.releaseName(mapping.getReleaseId()).orElse(null), mapping.isArchived(), mapping.getName(), mapping.getContractName(),
                 mapping.getContractVersion(), mapping.getDomain(), mapping.getDescription(), mapping.getTargetTable(),
                 mapping.getOwnerTeam(), mapping.getStatus(), mapping.getPublishedVersion(),
                 mapping.getPublishedCommit(), mapping.getCreatedBy(), mapping.getUpdatedAt(), mapping.getVersion(),
                 mapping.getRules().stream().map(RuleDto::from).toList(), validator.validate(mapping), history,
-                artifacts.contentHash(mapping));
+                artifacts.contentHash(mapping), open);
     }
 
     private Mapping load(UUID id) {

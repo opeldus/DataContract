@@ -184,3 +184,10 @@ select:disabled { background: var(--bg); color: var(--muted); }
 .trace-table td { padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--bg); vertical-align: top; }
 .trace-table ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.2rem; }
 .trace-filter { max-width: 26rem; margin-bottom: 0.75rem; }
+
+.scope { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.82rem; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.scope-archived { border-color: var(--warning); color: var(--warning); }
+.release-select { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: var(--muted); }
+.release-select select { width: auto; color: var(--text); }
+.inherited { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.conflict-panel { border-color: var(--error); }

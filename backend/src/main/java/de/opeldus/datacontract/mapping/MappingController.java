@@ -44,8 +44,8 @@ public class MappingController {
     }
 
     @GetMapping
-    public List<MappingSummary> list() {
-        return service.list();
+    public List<MappingSummary> list(@RequestParam(required = false) UUID release) {
+        return service.list(release);
     }
 
     @PostMapping

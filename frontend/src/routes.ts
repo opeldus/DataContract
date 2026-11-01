@@ -4,7 +4,8 @@ export type Page =
   | { view: "products" }
   | { view: "product"; id: string }
   | { view: "graph" }
-  | { view: "requirements" };
+  | { view: "requirements" }
+  | { view: "releases" };
 
 /** Hash routes work without server configuration; Jira and Confluence link to them. */
 export function toHash(page: Page): string {
@@ -29,6 +30,8 @@ export function fromHash(hash: string): Page {
       return { view: "graph" };
     case "requirements":
       return { view: "requirements" };
+    case "releases":
+      return { view: "releases" };
     default:
       return { view: "mappings" };
   }

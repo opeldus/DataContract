@@ -13,7 +13,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Compares a mapping's target with the DDL in Git, without any database connection. Conflicts with an existing table
- * block the review; a table without DDL only warns, since it may simply not exist yet.
+ * block the review; a table without DDL only warns, since it may simply not exist yet. The DDL reflects one branch, so
+ * in a release, where the DDL may still be on its way, conflicts only warn as well.
  */
 @Component
 public class DdlComparison {
@@ -28,6 +29,7 @@ public class DdlComparison {
         if (!index.isAvailable() || mapping.getTargetTable() == null) {
             return List.of();
         }
+        var conflictSeverity = mapping.getReleaseId() == null ? Severity.ERROR : Severity.WARNING;
         var issues = new ArrayList<ValidationIssue>();
         var lookup = index.find(mapping.getTargetTable());
         if (lookup.table() == null) {
@@ -48,11 +50,11 @@ public class DdlComparison {
             mapped.add(name);
             var column = table.columns().stream().filter(candidate -> candidate.name().equals(name)).findFirst();
             if (column.isEmpty()) {
-                issues.add(issue(Severity.ERROR, "DDL_COLUMN_MISSING",
+                issues.add(issue(conflictSeverity, "DDL_COLUMN_MISSING",
                         "Die Spalte '" + rule.getTargetColumn() + "' fehlt in der DDL von " + table.name() + ".",
                         rule, "targetColumn"));
             } else {
-                compareColumn(rule, column.get(), issues);
+                compareColumn(rule, column.get(), conflictSeverity, issues);
             }
         }
         var unmapped = table.columns().stream()
@@ -67,14 +69,15 @@ public class DdlComparison {
         return issues;
     }
 
-    private void compareColumn(MappingRule rule, DdlSchema.Column column, List<ValidationIssue> issues) {
+    private void compareColumn(MappingRule rule, DdlSchema.Column column, Severity conflictSeverity,
+            List<ValidationIssue> issues) {
         if (rule.getTargetType() != null) {
             var difference = ColumnType.parse(column.type()).compareTo(ColumnType.parse(rule.getTargetType()));
             if (difference == ColumnType.Difference.VARIANT) {
                 issues.add(issue(Severity.WARNING, "DDL_TYPE_VARIANT",
                         "Die DDL nutzt " + column.type() + ", das Mapping " + rule.getTargetType() + ".", rule, "targetType"));
             } else if (difference != ColumnType.Difference.SAME) {
-                issues.add(issue(Severity.ERROR, "DDL_TYPE_MISMATCH",
+                issues.add(issue(conflictSeverity, "DDL_TYPE_MISMATCH",
                         "Die DDL nutzt " + column.type() + ", das Mapping " + rule.getTargetType() + ".", rule, "targetType"));
             }
         }

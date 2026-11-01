@@ -264,7 +264,7 @@ class AtlassianIntegrationTest {
         var port = new HashMap<String, Object>();
         port.put("direction", "OUTPUT");
         port.put("name", "out");
-        port.put("contractMappingId", contract);
+        port.put("contractKey", contract);
         port.put("contractVersion", "1.0.0");
         product.put("ports", List.of(port));
         send(put("/api/products/" + created.path("id").asText()), product, anna(), 200);

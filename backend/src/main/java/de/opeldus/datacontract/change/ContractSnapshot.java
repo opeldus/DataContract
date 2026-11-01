@@ -19,7 +19,7 @@ public record ContractSnapshot(String targetTable, String domain, String ownerTe
 
     public static ContractSnapshot of(Mapping mapping) {
         var rules = mapping.getRules().stream()
-                .map(rule -> new Rule(rule.getId(), rule.getSourceDataset(), rule.getSourceColumn(),
+                .map(rule -> new Rule(rule.getLineageId(), rule.getSourceDataset(), rule.getSourceColumn(),
                         rule.getTargetColumn(), rule.getTargetType(), rule.isRequired(), rule.isPrimaryKey(),
                         rule.getTransformation(), rule.getDescription(), rule.getRequirementKey()))
                 .toList();

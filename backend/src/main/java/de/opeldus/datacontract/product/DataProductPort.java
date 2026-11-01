@@ -1,6 +1,5 @@
 package de.opeldus.datacontract.product;
 
-import de.opeldus.datacontract.mapping.Mapping;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,6 +18,9 @@ public class DataProductPort {
     @Id
     private UUID id = UUID.randomUUID();
 
+    /** Shared by the copies of this port across releases, which is how changes are matched up. */
+    private UUID lineageId = id;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_id")
     private DataProduct product;
@@ -30,10 +32,8 @@ public class DataProductPort {
     private int sortOrder;
     private String name;
 
-    /** The mapping that generates the referenced contract. */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "contract_id")
-    private Mapping contract;
+    /** Identifies the contract across releases. */
+    private UUID contractKey;
 
     private String contractVersion;
 
@@ -44,14 +44,26 @@ public class DataProductPort {
         this.direction = direction;
     }
 
+    DataProductPort copyFor(DataProduct target, int order) {
+        var copy = new DataProductPort(target, direction);
+        copy.lineageId = lineageId;
+        copy.sortOrder = order;
+        copy.name = name;
+        copy.contractKey = contractKey;
+        copy.contractVersion = contractVersion;
+        return copy;
+    }
+
     public UUID getId() { return id; }
+    public UUID getLineageId() { return lineageId; }
+    public void setLineageId(UUID lineageId) { this.lineageId = lineageId; }
     public DataProduct getProduct() { return product; }
     public PortDirection getDirection() { return direction; }
     public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public Mapping getContract() { return contract; }
-    public void setContract(Mapping contract) { this.contract = contract; }
+    public UUID getContractKey() { return contractKey; }
+    public void setContractKey(UUID contractKey) { this.contractKey = contractKey; }
     public String getContractVersion() { return contractVersion; }
     public void setContractVersion(String contractVersion) { this.contractVersion = contractVersion; }
 }

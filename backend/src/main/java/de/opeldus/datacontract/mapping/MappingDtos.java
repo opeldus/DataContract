@@ -1,5 +1,6 @@
 package de.opeldus.datacontract.mapping;
 
+import de.opeldus.datacontract.release.ReleaseDtos.ConflictView;
 import de.opeldus.datacontract.review.ReviewEvent;
 import de.opeldus.datacontract.review.ReviewEventType;
 import de.opeldus.datacontract.review.ReviewStatus;
@@ -19,7 +20,8 @@ public final class MappingDtos {
     public record CreateMappingRequest(
             @NotBlank @Size(max = 200) String name,
             @NotBlank @Pattern(regexp = "[a-z0-9][a-z0-9_-]{0,99}",
-                    message = "nur Kleinbuchstaben, Ziffern, _ und - erlaubt") String contractName) {}
+                    message = "nur Kleinbuchstaben, Ziffern, _ und - erlaubt") String contractName,
+            UUID releaseId) {}
 
     public record UpdateMappingRequest(
             long version,
@@ -50,22 +52,17 @@ public final class MappingDtos {
         }
     }
 
+    /** {@code inherited} means the state comes from {@code originRelease} (null: the mainline), not from the release asked for. */
     public record MappingSummary(
-            UUID id, String name, String contractName, String contractVersion, ReviewStatus status,
-            String ownerTeam, int ruleCount, Instant updatedAt) {
-
-        static MappingSummary from(Mapping mapping) {
-            return new MappingSummary(mapping.getId(), mapping.getName(), mapping.getContractName(),
-                    mapping.getContractVersion(), mapping.getStatus(), mapping.getOwnerTeam(),
-                    mapping.getRules().size(), mapping.getUpdatedAt());
-        }
-    }
+            UUID id, UUID key, String name, String contractName, String contractVersion, ReviewStatus status,
+            String ownerTeam, int ruleCount, Instant updatedAt, boolean inherited, String originRelease) {}
 
     public record MappingDetail(
-            UUID id, String name, String contractName, String contractVersion, String domain, String description,
+            UUID id, UUID key, UUID releaseId, String releaseName, boolean archived, String name, String contractName, String contractVersion, String domain, String description,
             String targetTable, String ownerTeam, ReviewStatus status, String publishedVersion,
             String publishedCommit, String createdBy, Instant updatedAt, long version, List<RuleDto> rules,
-            List<ValidationIssue> issues, List<EventDto> events, String contentHash) {}
+            List<ValidationIssue> issues, List<EventDto> events, String contentHash,
+            List<ConflictView> conflicts) {}
 
     public record EventDto(
             UUID id, ReviewEventType type, String actor, String comment, UUID ruleId, String contentHash,

@@ -17,8 +17,8 @@ public class OdcsContractGenerator implements ArtifactGenerator {
 
     static final String API_VERSION = "v3.2.0";
 
-    public static String contractId(UUID mappingId) {
-        return "urn:datacontract:" + mappingId;
+    public static String contractId(UUID contractKey) {
+        return "urn:datacontract:" + contractKey;
     }
 
     @Override
@@ -32,7 +32,7 @@ public class OdcsContractGenerator implements ArtifactGenerator {
         var document = new LinkedHashMap<String, Object>();
         document.put("apiVersion", API_VERSION);
         document.put("kind", "DataContract");
-        document.put("id", contractId(mapping.getId()));
+        document.put("id", contractId(mapping.getKey()));
         document.put("name", mapping.getContractName());
         document.put("version", mapping.getContractVersion());
         document.put("status", "active");
@@ -82,7 +82,7 @@ public class OdcsContractGenerator implements ArtifactGenerator {
         }
         putIfPresent(property, "transformLogic", rule.getTransformation());
         var custom = new ArrayList<Map<String, Object>>();
-        custom.add(customProperty("mappingRuleId", rule.getId().toString()));
+        custom.add(customProperty("mappingRuleId", rule.getLineageId().toString()));
         if (rule.getRequirementKey() != null) {
             custom.add(customProperty("requirementKey", rule.getRequirementKey()));
         }

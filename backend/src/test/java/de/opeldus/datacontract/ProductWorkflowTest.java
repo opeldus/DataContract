@@ -273,7 +273,7 @@ class ProductWorkflowTest {
         var port = new HashMap<String, Object>();
         port.put("direction", direction);
         port.put("name", name);
-        port.put("contractMappingId", contract);
+        port.put("contractKey", contract);
         port.put("contractVersion", version);
         return port;
     }

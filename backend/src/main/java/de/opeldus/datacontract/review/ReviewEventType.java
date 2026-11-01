@@ -9,5 +9,7 @@ public enum ReviewEventType {
     CHANGES_REQUESTED,
     APPROVED,
     REOPENED,
-    PUBLISHED
+    PUBLISHED,
+    FORKED,
+    FORWARD_MERGED
 }

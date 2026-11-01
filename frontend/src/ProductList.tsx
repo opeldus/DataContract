@@ -4,23 +4,34 @@ import { STATUS_LABELS, toTechnicalName } from "./labels";
 
 interface Props {
   me: Me;
+  release: string | null;
   onOpen: (id: string) => void;
 }
 
-export function ProductList({ me, onOpen }: Props) {
+export function ProductList({ me, release, onOpen }: Props) {
   const [products, setProducts] = useState<ProductSummary[] | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.listProducts().then(setProducts).catch((cause: Error) => setError(cause.message));
-  }, []);
+    api.listProducts(release).then(setProducts).catch((cause: Error) => setError(cause.message));
+  }, [release]);
+
+  async function takeOver(key: string) {
+    setError(null);
+    try {
+      const fork = await api.forkProduct(release!, key);
+      onOpen(fork.id);
+    } catch (cause) {
+      setError((cause as Error).message);
+    }
+  }
 
   async function create(event: FormEvent) {
     event.preventDefault();
     setError(null);
     try {
-      const created = await api.createProduct(name.trim(), toTechnicalName(name));
+      const created = await api.createProduct(name.trim(), toTechnicalName(name), release);
       onOpen(created.id);
     } catch (cause) {
       setError((cause as Error).message);
@@ -54,6 +65,7 @@ export function ProductList({ me, onOpen }: Props) {
                 <th>Team</th>
                 <th>Ports (ein/aus)</th>
                 <th>Geändert</th>
+                {release && <th>Stand aus</th>}
               </tr>
             </thead>
             <tbody>
@@ -68,6 +80,20 @@ export function ProductList({ me, onOpen }: Props) {
                   <td>{product.ownerTeam ?? "–"}</td>
                   <td>{product.inputPorts} / {product.outputPorts}</td>
                   <td>{new Date(product.updatedAt).toLocaleString("de-DE")}</td>
+                  {release && (
+                    <td>
+                      {product.inherited ? (
+                        <span className="inherited">
+                          {product.originRelease ?? "main"}
+                          {me.roles.includes("EDITOR") && product.status === "PUBLISHED" && (
+                            <button type="button" onClick={() => takeOver(product.key)}>Ins Release übernehmen</button>
+                          )}
+                        </span>
+                      ) : (
+                        "diesem Release"
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

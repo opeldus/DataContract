@@ -14,7 +14,7 @@ import java.util.UUID;
 @Table(name = "integration_task")
 class IntegrationTask {
 
-    enum Kind { ISSUE_LINK, ISSUE_UNLINK, DOCUMENTATION_PAGE }
+    enum Kind { ISSUE_LINK, ISSUE_UNLINK, DOCUMENTATION_PAGE, GIT_FORWARD }
 
     enum State { PENDING, DONE, FAILED, SUPERSEDED }
 

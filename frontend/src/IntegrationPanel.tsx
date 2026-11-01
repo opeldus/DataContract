@@ -7,6 +7,7 @@ const KIND_LABELS: Record<IntegrationTask["kind"], string> = {
   ISSUE_LINK: "Link in Jira",
   ISSUE_UNLINK: "Link in Jira entfernen",
   DOCUMENTATION_PAGE: "Seite in Confluence",
+  GIT_FORWARD: "Nachführen nach",
 };
 
 const STATE_LABELS: Record<IntegrationTask["state"], string> = {
@@ -48,9 +49,9 @@ export function IntegrationPanel({ subjectId, revision, me }: Props) {
   }
 
   return (
-    <section className="panel" aria-label="Jira und Confluence">
+    <section className="panel" aria-label="Übertragungen">
       <div className="toolbar">
-        <h2>Jira und Confluence</h2>
+        <h2>Übertragungen</h2>
         <span className="spacer" />
         <button type="button" onClick={load}>Aktualisieren</button>
       </div>

@@ -14,17 +14,19 @@ function truncate(label: string) {
 }
 
 interface Props {
+  release: string | null;
   onOpen: (node: GraphNode) => void;
 }
 
-export function DependencyGraph({ onOpen }: Props) {
+export function DependencyGraph({ release, onOpen }: Props) {
   const [graph, setGraph] = useState<Graph | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.graph().then(setGraph).catch((cause: Error) => setError(cause.message));
-  }, []);
+    setSelectedId(null);
+    api.graph(release).then(setGraph).catch((cause: Error) => setError(cause.message));
+  }, [release]);
 
   const layout = useMemo(() => {
     if (!graph) {

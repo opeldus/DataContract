@@ -7,6 +7,7 @@ import de.opeldus.datacontract.product.ProductDtos.ProductSummary;
 import de.opeldus.datacontract.product.ProductDtos.UpdateProductRequest;
 import de.opeldus.datacontract.review.ReviewController.ApproveRequest;
 import de.opeldus.datacontract.review.ReviewController.CommentRequest;
+import de.opeldus.datacontract.review.ReviewController.ResolveRequest;
 import de.opeldus.datacontract.security.CurrentUser;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,8 +37,8 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductSummary> list() {
-        return service.list();
+    public List<ProductSummary> list(@RequestParam(required = false) UUID release) {
+        return service.list(release);
     }
 
     @PostMapping
@@ -89,6 +91,13 @@ public class ProductController {
     @PreAuthorize("hasAnyRole('EDITOR', 'REVIEWER')")
     public ProductDetail reopen(@PathVariable UUID id) {
         return service.reopen(id, currentUser.username());
+    }
+
+    @PostMapping("/{id}/conflicts/{conflictId}/resolve")
+    @PreAuthorize("hasRole('EDITOR')")
+    public ProductDetail resolveConflict(@PathVariable UUID id, @PathVariable UUID conflictId,
+            @RequestBody ResolveRequest request) {
+        return service.resolveConflict(id, conflictId, request.takeTheirs(), currentUser.username());
     }
 
     @PostMapping("/{id}/publish")

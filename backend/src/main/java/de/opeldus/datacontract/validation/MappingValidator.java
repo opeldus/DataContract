@@ -11,6 +11,12 @@ import de.opeldus.datacontract.change.ContractChangeAnalyzer;
 import de.opeldus.datacontract.ddl.DdlComparison;
 import de.opeldus.datacontract.integration.RequirementDirectory;
 import de.opeldus.datacontract.mapping.Mapping;
+import de.opeldus.datacontract.mapping.PublishedVersion;
+import de.opeldus.datacontract.mapping.PublishedVersionRepository;
+import de.opeldus.datacontract.release.MergeConflict;
+import de.opeldus.datacontract.release.MergeConflictRepository;
+import de.opeldus.datacontract.release.PlannedSchema;
+import de.opeldus.datacontract.release.ReleaseScopes;
 import de.opeldus.datacontract.mapping.MappingRule;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,21 +36,34 @@ public class MappingValidator {
     private final ContractChangeAnalyzer changes;
     private final DdlComparison ddl;
     private final RequirementDirectory requirements;
+    private final ReleaseScopes scopes;
+    private final PlannedSchema planned;
+    private final MergeConflictRepository conflicts;
+    private final PublishedVersionRepository versions;
 
     public MappingValidator(CatalogSearch catalog, OdcsContractGenerator odcsGenerator,
             OdcsSchemaValidator odcsSchema, ContractChangeAnalyzer changes, DdlComparison ddl,
-            RequirementDirectory requirements) {
+            RequirementDirectory requirements, ReleaseScopes scopes, PlannedSchema planned,
+            MergeConflictRepository conflicts, PublishedVersionRepository versions) {
         this.catalog = catalog;
         this.odcsGenerator = odcsGenerator;
         this.odcsSchema = odcsSchema;
         this.changes = changes;
         this.ddl = ddl;
         this.requirements = requirements;
+        this.scopes = scopes;
+        this.planned = planned;
+        this.conflicts = conflicts;
+        this.versions = versions;
     }
 
     public List<ValidationIssue> validate(Mapping mapping) {
         var issues = new ArrayList<ValidationIssue>();
         validateHeader(mapping, issues);
+        var openConflicts = conflicts.countBySubjectIdAndState(mapping.getId(), MergeConflict.State.OPEN);
+        if (openConflicts > 0) {
+            issues.add(error("MERGE_CONFLICT", "Offene Konflikte mit dem Basisrelease: " + openConflicts + ".", null, null));
+        }
         var targets = new HashMap<String, Integer>();
         for (var rule : mapping.getRules()) {
             if (rule.getTargetColumn() != null) {
@@ -52,7 +71,7 @@ public class MappingValidator {
             }
         }
         for (var rule : mapping.getRules()) {
-            validateRule(rule, targets, issues);
+            validateRule(mapping, rule, targets, issues);
         }
         issues.addAll(ddl.compare(mapping));
         validateVersionBump(mapping, issues);
@@ -62,6 +81,11 @@ public class MappingValidator {
             }
         }
         return issues;
+    }
+
+    private static ValidationIssue plannedSource(PlannedSchema.PlannedColumn column, java.util.UUID ruleId) {
+        return warning("SOURCE_PLANNED", "Die Spalte '" + column.name() + "' ist noch nicht live, sie entsteht mit "
+                + column.origin() + ".", ruleId, "sourceColumn");
     }
 
     private void validateRequirement(MappingRule rule, List<ValidationIssue> issues) {
@@ -81,7 +105,8 @@ public class MappingValidator {
     private void validateVersionBump(Mapping mapping, List<ValidationIssue> issues) {
         var published = mapping.getPublishedVersion();
         var version = mapping.getContractVersion();
-        if (!mapping.getStatus().isEditable() || published == null || !SemanticVersion.isValid(version)) {
+        if (!mapping.getStatus().isEditable() || published == null || !SemanticVersion.isValid(version)
+                || !SemanticVersion.isValid(published) || SemanticVersion.compare(version, published) <= 0) {
             return;
         }
         var report = changes.analyze(mapping);
@@ -118,15 +143,24 @@ public class MappingValidator {
         var version = mapping.getContractVersion();
         if (!SemanticVersion.isValid(version)) {
             issues.add(error("VERSION_INVALID", "Die Version muss das Format 1.2.3 haben.", null, "contractVersion"));
-        } else if (mapping.getStatus().isEditable() && mapping.getPublishedVersion() != null
-                && SemanticVersion.compare(version, mapping.getPublishedVersion()) <= 0) {
-            issues.add(error("VERSION_NOT_INCREASED",
-                    "Die Version muss höher sein als die veröffentlichte Version " + mapping.getPublishedVersion() + ".",
-                    null, "contractVersion"));
+        } else if (mapping.getStatus().isEditable()) {
+            var highest = scopes.visibleVersions(mapping.getKey(), mapping.getReleaseId()).stream()
+                    .filter(SemanticVersion::isValid)
+                    .max(SemanticVersion.ORDER);
+            if (highest.isPresent() && SemanticVersion.compare(version, highest.get()) <= 0) {
+                issues.add(error("VERSION_NOT_INCREASED",
+                        "Die Version muss höher sein als die veröffentlichte Version " + highest.get() + ".",
+                        null, "contractVersion"));
+            } else if (versions.existsById(new PublishedVersion.Key(mapping.getKey(), version))) {
+                issues.add(error("VERSION_TAKEN",
+                        "Die Version " + version + " wurde bereits in einem anderen Release veröffentlicht.",
+                        null, "contractVersion"));
+            }
         }
     }
 
-    private void validateRule(MappingRule rule, HashMap<String, Integer> targets, List<ValidationIssue> issues) {
+    private void validateRule(Mapping mapping, MappingRule rule, HashMap<String, Integer> targets,
+            List<ValidationIssue> issues) {
         var id = rule.getId();
         var target = rule.getTargetColumn();
         if (target == null) {
@@ -165,12 +199,25 @@ public class MappingValidator {
             }
             return;
         }
+        var plannedColumn = planned.findColumn(rule.getSourceDataset(), rule.getSourceColumn(), mapping.getReleaseId(), mapping.getKey());
         if (!catalog.datasetExists(rule.getSourceDataset())) {
-            issues.add(warning("SOURCE_DATASET_UNKNOWN",
-                    "Die Quelle '" + rule.getSourceDataset() + "' ist nicht im Katalog.", id, "sourceDataset"));
+            var plannedTable = planned.tableOrigin(rule.getSourceDataset(), mapping.getReleaseId(), mapping.getKey());
+            if (plannedColumn.isPresent()) {
+                issues.add(plannedSource(plannedColumn.get(), id));
+            } else if (plannedTable.isPresent()) {
+                issues.add(error("SOURCE_COLUMN_UNKNOWN", "Die Spalte '" + rule.getSourceColumn() + "' plant "
+                        + plannedTable.get() + " nicht.", id, "sourceColumn"));
+            } else {
+                issues.add(warning("SOURCE_DATASET_UNKNOWN",
+                        "Die Quelle '" + rule.getSourceDataset() + "' ist nicht im Katalog.", id, "sourceDataset"));
+            }
             return;
         }
         var column = catalog.findColumn(rule.getSourceDataset(), rule.getSourceColumn());
+        if (column.isEmpty() && plannedColumn.isPresent()) {
+            issues.add(plannedSource(plannedColumn.get(), id));
+            return;
+        }
         if (column.isEmpty()) {
             issues.add(error("SOURCE_COLUMN_UNKNOWN",
                     "Die Spalte '" + rule.getSourceColumn() + "' gibt es in '" + rule.getSourceDataset() + "' nicht.",

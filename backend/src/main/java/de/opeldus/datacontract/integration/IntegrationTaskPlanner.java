@@ -2,11 +2,12 @@ package de.opeldus.datacontract.integration;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.opeldus.datacontract.artifact.GeneratedArtifact;
 import de.opeldus.datacontract.change.ContractSnapshot;
 import de.opeldus.datacontract.integration.IntegrationTask.Kind;
 import de.opeldus.datacontract.integration.IntegrationTask.State;
-import de.opeldus.datacontract.mapping.ContractVersion;
-import de.opeldus.datacontract.mapping.ContractVersionRepository;
+import de.opeldus.datacontract.mapping.PublishedVersion;
+import de.opeldus.datacontract.mapping.PublishedVersionRepository;
 import de.opeldus.datacontract.mapping.Mapping;
 import de.opeldus.datacontract.mapping.MappingRule;
 import de.opeldus.datacontract.product.DataProduct;
@@ -34,13 +35,13 @@ public class IntegrationTaskPlanner {
     private static final List<State> OPEN_STATES = List.of(State.PENDING, State.FAILED);
 
     private final IntegrationTaskRepository tasks;
-    private final ContractVersionRepository versions;
+    private final PublishedVersionRepository versions;
     private final ConfluenceRenderer renderer;
     private final List<IssueTracker> trackers;
     private final List<DocumentationPublisher> documentation;
     private final String publicUrl;
 
-    IntegrationTaskPlanner(IntegrationTaskRepository tasks, ContractVersionRepository versions,
+    IntegrationTaskPlanner(IntegrationTaskRepository tasks, PublishedVersionRepository versions,
             ConfluenceRenderer renderer, List<IssueTracker> trackers, List<DocumentationPublisher> documentation,
             @Value("${app.public-url:}") String publicUrl) {
         this.tasks = tasks;
@@ -55,11 +56,14 @@ public class IntegrationTaskPlanner {
 
     record PagePayload(String title, String body, String marker, String versionMessage) {}
 
+    record ForwardPayload(String branch, List<GeneratedArtifact> files, String message, String actor) {}
+
     public void planContract(Mapping mapping, String previousVersion) {
         var appUrl = appUrl("mappings", mapping.getId());
-        if (!documentation.isEmpty()) {
-            planPage(mapping.getId(), new PagePayload(renderer.contractTitle(mapping), renderer.contract(mapping, appUrl),
-                    ConfluenceRenderer.marker(mapping.getId()), "Version " + mapping.getContractVersion()));
+        // Documentation shows the mainline; a release reaches it when it is closed.
+        if (!documentation.isEmpty() && mapping.getReleaseId() == null) {
+            planPage(mapping.getKey(), new PagePayload(renderer.contractTitle(mapping), renderer.contract(mapping, appUrl),
+                    ConfluenceRenderer.marker(mapping.getKey()), "Version " + mapping.getContractVersion()));
         }
         if (trackers.isEmpty()) {
             return;
@@ -68,30 +72,37 @@ public class IntegrationTaskPlanner {
             log.warn("app.public-url is not set, so no links are created in Jira");
             return;
         }
-        var globalId = "datacontract:mapping:" + mapping.getId();
+        var globalId = "datacontract:mapping:" + mapping.getKey();
         var current = currentKeys(mapping);
         var link = new LinkPayload(globalId, appUrl, "Contract " + mapping.getContractName() + " " + mapping.getContractVersion(),
                 mapping.getName());
         for (var key : current) {
-            supersedeOpen(mapping.getId(), Kind.ISSUE_LINK, key);
-            supersedeOpen(mapping.getId(), Kind.ISSUE_UNLINK, key);
-            tasks.save(new IntegrationTask(mapping.getId(), Kind.ISSUE_LINK, key, write(link)));
+            supersedeOpen(mapping.getKey(), Kind.ISSUE_LINK, key);
+            supersedeOpen(mapping.getKey(), Kind.ISSUE_UNLINK, key);
+            tasks.save(new IntegrationTask(mapping.getKey(), Kind.ISSUE_LINK, key, write(link)));
         }
-        for (var key : previousKeys(mapping.getId(), previousVersion)) {
+        for (var key : previousKeys(mapping.getKey(), previousVersion)) {
             if (!current.contains(key)) {
-                supersedeOpen(mapping.getId(), Kind.ISSUE_LINK, key);
-                supersedeOpen(mapping.getId(), Kind.ISSUE_UNLINK, key);
-                tasks.save(new IntegrationTask(mapping.getId(), Kind.ISSUE_UNLINK, key, write(link)));
+                supersedeOpen(mapping.getKey(), Kind.ISSUE_LINK, key);
+                supersedeOpen(mapping.getKey(), Kind.ISSUE_UNLINK, key);
+                tasks.save(new IntegrationTask(mapping.getKey(), Kind.ISSUE_UNLINK, key, write(link)));
             }
         }
     }
 
     public void planProduct(DataProduct product) {
-        if (!documentation.isEmpty()) {
-            planPage(product.getId(), new PagePayload(renderer.productTitle(product),
+        if (!documentation.isEmpty() && product.getReleaseId() == null) {
+            planPage(product.getKey(), new PagePayload(renderer.productTitle(product),
                     renderer.product(product, appUrl("products", product.getId())),
-                    ConfluenceRenderer.marker(product.getId()), "Version " + product.getProductVersion()));
+                    ConfluenceRenderer.marker(product.getKey()), "Version " + product.getProductVersion()));
         }
+    }
+
+    /** Writes the files to a dependent release's branch; a retry of an older state must not overwrite a newer one. */
+    public void planForward(UUID subjectKey, String branch, List<GeneratedArtifact> files, String message, String actor) {
+        supersedeOpen(subjectKey, Kind.GIT_FORWARD, branch);
+        tasks.save(new IntegrationTask(subjectKey, Kind.GIT_FORWARD, branch,
+                write(new ForwardPayload(branch, files, message, actor))));
     }
 
     private void planPage(UUID subjectId, PagePayload page) {
@@ -117,8 +128,8 @@ public class IntegrationTaskPlanner {
         if (previousVersion == null) {
             return Set.of();
         }
-        return versions.findById(new ContractVersion.Key(mappingId, previousVersion))
-                .map(ContractVersion::getSnapshot)
+        return versions.findById(new PublishedVersion.Key(mappingId, previousVersion))
+                .map(PublishedVersion::getSnapshot)
                 .filter(Objects::nonNull)
                 .map(ContractSnapshot::fromJson)
                 .map(snapshot -> snapshot.rules().stream()

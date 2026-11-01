@@ -21,8 +21,9 @@ keinen Git-Zugang.
 - Jira Cloud: Autovervollständigung und Prüfung der Anforderungen, Links vom Vorgang zum Contract
 - Confluence Cloud: generierte Seiten für Contracts und Datenprodukte
 - Rückverfolgung von der Anforderung über Regel und Contract bis zum Datenprodukt
+- Releases, die aufeinander aufbauen, mit automatischem Nachführen, Konfliktklärung und geplanten Spalten
 
-Noch nicht enthalten: Releases, SSO. Die Anwender stehen bisher in der
+Noch nicht enthalten: SSO. Die Anwender stehen bisher in der
 Konfiguration.
 
 ## Lokal starten
@@ -70,6 +71,17 @@ ohne DDL erzeugt nur einen Hinweis.
 
 Die Vorlage `ci/artifact-repo-ci.yml` prüft veröffentlichte Contracts mit der Data Contract CLI und Datenprodukte gegen
 das ODPS-Schema.
+
+### Releases
+
+Ein Release baut auf `main` oder einem anderen offenen Release auf und bekommt den Branch `release/<name>`. Es enthält nur
+das, was es ändert, alles andere erbt es. Wird ein Stand veröffentlicht, führt die Anwendung ihn in abhängige Releases
+nach: Ohne eigene Kopie schreibt der Bot die Dateien auf deren Branch, mit eigener Kopie wird je Feld zusammengeführt.
+Widersprüche erscheinen als Konflikt in der Oberfläche und sperren das Einreichen, Git-Konflikte entstehen nicht.
+
+Abschließen lässt sich ein Release, wenn alles darin veröffentlicht und sein Basisrelease abgeschlossen ist. Die Dateien
+landen dann auf `main`, es entsteht der Tag `release/<name>`, und abhängige Releases bauen danach auf `main` auf. Der
+DDL-Vergleich liest einen festen Branch, deshalb erzeugen Abweichungen in einem Release nur Hinweise.
 
 ### Jira und Confluence Cloud
 

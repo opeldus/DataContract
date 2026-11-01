@@ -6,6 +6,7 @@ import static de.opeldus.datacontract.common.ApiExceptions.forbidden;
 
 import de.opeldus.datacontract.artifact.GeneratedArtifact;
 import de.opeldus.datacontract.publish.GitPublisher;
+import de.opeldus.datacontract.release.ReleaseScopes;
 import de.opeldus.datacontract.security.CurrentUser;
 import java.util.HashSet;
 import java.util.List;
@@ -18,16 +19,19 @@ import org.springframework.stereotype.Component;
 public class ReviewWorkflow {
 
     private static final Set<ReviewEventType> AUTHORING_EVENTS = Set.of(ReviewEventType.CREATED,
-            ReviewEventType.EDITED, ReviewEventType.IMPORTED, ReviewEventType.SUBMITTED);
+            ReviewEventType.EDITED, ReviewEventType.IMPORTED, ReviewEventType.SUBMITTED, ReviewEventType.FORKED);
 
     private final ReviewEventRepository events;
     private final GitPublisher publisher;
     private final CurrentUser currentUser;
+    private final ReleaseScopes scopes;
 
-    public ReviewWorkflow(ReviewEventRepository events, GitPublisher publisher, CurrentUser currentUser) {
+    public ReviewWorkflow(ReviewEventRepository events, GitPublisher publisher, CurrentUser currentUser,
+            ReleaseScopes scopes) {
         this.events = events;
         this.publisher = publisher;
         this.currentUser = currentUser;
+        this.scopes = scopes;
     }
 
     public void submit(ReviewSubject subject, long errorCount, String contentHash, String actor) {
@@ -73,6 +77,9 @@ public class ReviewWorkflow {
         if (subject.getStatus().isEditable()) {
             throw conflict("Das ist bereits in Bearbeitung.");
         }
+        if (subject.isArchived()) {
+            throw conflict("Dieser Stand wurde durch ein Release ersetzt und kann nicht mehr bearbeitet werden.");
+        }
         subject.setStatus(ReviewStatus.DRAFT);
         record(subject, new ReviewEvent(subject.getId(), ReviewEventType.REOPENED, actor));
     }
@@ -93,7 +100,7 @@ public class ReviewWorkflow {
         var author = currentUser.identity(lastAuthor != null ? lastAuthor.getActor() : subject.getCreatedBy());
         var message = "Publish %s%n%nSubject: %s%nApproved-by: %s%nPublished-by: %s%nContent-SHA256: %s%n".formatted(
                 title, subject.getId(), approval.getActor(), actor, contentHash);
-        var commit = publisher.publish(artifacts, message, author);
+        var commit = publisher.publish(scopes.branchOf(subject.getReleaseId()), artifacts, message, author);
         subject.markPublished(commit);
         record(subject, new ReviewEvent(subject.getId(), ReviewEventType.PUBLISHED, actor, commit)
                 .withContentHash(contentHash));

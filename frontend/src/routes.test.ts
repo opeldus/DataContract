@@ -10,6 +10,7 @@ describe("routes", () => {
       { view: "product", id: "def" },
       { view: "graph" },
       { view: "requirements" },
+      { view: "releases" },
     ];
 
     for (const page of pages) {

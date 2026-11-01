@@ -257,7 +257,7 @@ class ChangeReviewTest {
         var port = new HashMap<String, Object>();
         port.put("direction", direction);
         port.put("name", direction.toLowerCase());
-        port.put("contractMappingId", contract);
+        port.put("contractKey", contract);
         port.put("contractVersion", "1.0.0");
         return port;
     }

@@ -57,6 +57,15 @@ public class ReviewController {
         return service.publish(id, currentUser.username());
     }
 
+    @PostMapping("/conflicts/{conflictId}/resolve")
+    @PreAuthorize("hasRole('EDITOR')")
+    public MappingDetail resolveConflict(@PathVariable UUID id, @PathVariable UUID conflictId,
+            @RequestBody ResolveRequest request) {
+        return service.resolveConflict(id, conflictId, request.takeTheirs(), currentUser.username());
+    }
+
+    public record ResolveRequest(boolean takeTheirs) {}
+
     public record ApproveRequest(String contentHash) {}
 
     public record CommentRequest(String comment, UUID ruleId) {}

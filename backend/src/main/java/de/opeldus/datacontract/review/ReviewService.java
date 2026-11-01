@@ -6,12 +6,13 @@ import static de.opeldus.datacontract.common.ApiExceptions.notFound;
 import de.opeldus.datacontract.artifact.ArtifactService;
 import de.opeldus.datacontract.change.ContractSnapshot;
 import de.opeldus.datacontract.integration.IntegrationTaskPlanner;
-import de.opeldus.datacontract.mapping.ContractVersion;
-import de.opeldus.datacontract.mapping.ContractVersionRepository;
+import de.opeldus.datacontract.mapping.PublishedVersion;
+import de.opeldus.datacontract.mapping.PublishedVersionRepository;
 import de.opeldus.datacontract.mapping.Mapping;
 import de.opeldus.datacontract.mapping.MappingDtos.MappingDetail;
 import de.opeldus.datacontract.mapping.MappingRepository;
 import de.opeldus.datacontract.mapping.MappingService;
+import de.opeldus.datacontract.release.ReleaseForwarder;
 import de.opeldus.datacontract.validation.MappingValidator;
 import de.opeldus.datacontract.validation.ValidationIssue;
 import java.util.UUID;
@@ -22,16 +23,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReviewService {
 
     private final MappingRepository mappings;
-    private final ContractVersionRepository contractVersions;
+    private final PublishedVersionRepository contractVersions;
     private final MappingService mappingService;
     private final MappingValidator validator;
     private final ArtifactService artifacts;
     private final ReviewWorkflow workflow;
     private final IntegrationTaskPlanner integrationTasks;
+    private final ReleaseForwarder forwarder;
 
-    public ReviewService(MappingRepository mappings, ContractVersionRepository contractVersions,
+    public ReviewService(MappingRepository mappings, PublishedVersionRepository contractVersions,
             MappingService mappingService, MappingValidator validator, ArtifactService artifacts,
-            ReviewWorkflow workflow, IntegrationTaskPlanner integrationTasks) {
+            ReviewWorkflow workflow, IntegrationTaskPlanner integrationTasks,
+            ReleaseForwarder forwarder) {
         this.mappings = mappings;
         this.contractVersions = contractVersions;
         this.mappingService = mappingService;
@@ -39,6 +42,7 @@ public class ReviewService {
         this.artifacts = artifacts;
         this.workflow = workflow;
         this.integrationTasks = integrationTasks;
+        this.forwarder = forwarder;
     }
 
     @Transactional
@@ -89,9 +93,17 @@ public class ReviewService {
         var generated = artifacts.generate(mapping);
         var title = mapping.getContractName() + " " + mapping.getContractVersion();
         var commit = workflow.publish(mapping, generated, artifacts.contentHash(generated), title, actor);
-        contractVersions.save(new ContractVersion(mapping.getId(), mapping.getContractVersion(), commit,
-                ContractSnapshot.of(mapping).toJson()));
+        contractVersions.save(new PublishedVersion(mapping.getKey(), mapping.getContractVersion(), commit,
+                ContractSnapshot.of(mapping).toJson(), mapping.getReleaseId()));
         integrationTasks.planContract(mapping, previousVersion);
+        forwarder.contractPublished(mapping, mapping.getContractVersion(), generated, actor);
+        return saved(mapping);
+    }
+
+    @Transactional
+    public MappingDetail resolveConflict(UUID id, UUID conflictId, boolean takeTheirs, String actor) {
+        var mapping = load(id);
+        forwarder.resolve(conflictId, id, takeTheirs, actor);
         return saved(mapping);
     }
 

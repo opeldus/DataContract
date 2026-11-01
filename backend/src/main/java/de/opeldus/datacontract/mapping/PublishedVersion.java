@@ -9,14 +9,17 @@ import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
-/** A contract version that reached Git; data product ports can only pin versions listed here. */
+/**
+ * A version of a contract or data product that reached Git. Ports can only pin versions listed here, and the snapshot
+ * is the baseline for change detection and for merging. {@code releaseId} is null once the version is on the mainline.
+ */
 @Entity
-@Table(name = "contract_version")
-@IdClass(ContractVersion.Key.class)
-public class ContractVersion {
+@Table(name = "published_version")
+@IdClass(PublishedVersion.Key.class)
+public class PublishedVersion {
 
     @Id
-    private UUID mappingId;
+    private UUID subjectKey;
 
     @Id
     private String version;
@@ -31,20 +34,25 @@ public class ContractVersion {
     @Column(updatable = false)
     private String snapshot;
 
-    protected ContractVersion() {}
+    private UUID releaseId;
 
-    public ContractVersion(UUID mappingId, String version, String commitId, String snapshot) {
-        this.mappingId = mappingId;
+    protected PublishedVersion() {}
+
+    public PublishedVersion(UUID subjectKey, String version, String commitId, String snapshot, UUID releaseId) {
+        this.subjectKey = subjectKey;
         this.version = version;
         this.commitId = commitId;
         this.snapshot = snapshot;
+        this.releaseId = releaseId;
     }
 
-    public UUID getMappingId() { return mappingId; }
+    public UUID getSubjectKey() { return subjectKey; }
     public String getVersion() { return version; }
     public String getCommitId() { return commitId; }
     public Instant getPublishedAt() { return publishedAt; }
     public String getSnapshot() { return snapshot; }
+    public UUID getReleaseId() { return releaseId; }
+    public void moveToMainline() { releaseId = null; }
 
-    public record Key(UUID mappingId, String version) implements Serializable {}
+    public record Key(UUID subjectKey, String version) implements Serializable {}
 }
