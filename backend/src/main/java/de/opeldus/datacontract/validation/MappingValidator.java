@@ -9,6 +9,7 @@ import de.opeldus.datacontract.catalog.CatalogSearch;
 import de.opeldus.datacontract.change.ChangeImpact;
 import de.opeldus.datacontract.change.ContractChangeAnalyzer;
 import de.opeldus.datacontract.ddl.DdlComparison;
+import de.opeldus.datacontract.integration.RequirementDirectory;
 import de.opeldus.datacontract.mapping.Mapping;
 import de.opeldus.datacontract.mapping.MappingRule;
 import java.util.ArrayList;
@@ -28,14 +29,17 @@ public class MappingValidator {
     private final OdcsSchemaValidator odcsSchema;
     private final ContractChangeAnalyzer changes;
     private final DdlComparison ddl;
+    private final RequirementDirectory requirements;
 
     public MappingValidator(CatalogSearch catalog, OdcsContractGenerator odcsGenerator,
-            OdcsSchemaValidator odcsSchema, ContractChangeAnalyzer changes, DdlComparison ddl) {
+            OdcsSchemaValidator odcsSchema, ContractChangeAnalyzer changes, DdlComparison ddl,
+            RequirementDirectory requirements) {
         this.catalog = catalog;
         this.odcsGenerator = odcsGenerator;
         this.odcsSchema = odcsSchema;
         this.changes = changes;
         this.ddl = ddl;
+        this.requirements = requirements;
     }
 
     public List<ValidationIssue> validate(Mapping mapping) {
@@ -58,6 +62,19 @@ public class MappingValidator {
             }
         }
         return issues;
+    }
+
+    private void validateRequirement(MappingRule rule, List<ValidationIssue> issues) {
+        var key = rule.getRequirementKey();
+        switch (requirements.check(key)) {
+            case INVALID_FORMAT -> issues.add(warning("REQUIREMENT_FORMAT",
+                    "'" + key + "' sieht nicht wie ein Jira-Schlüssel aus, zum Beispiel DATA-123.", rule.getId(),
+                    "requirementKey"));
+            case NOT_FOUND -> issues.add(error("REQUIREMENT_NOT_FOUND",
+                    "Jira kennt '" + key + "' nicht, oder dem Zugang fehlen die Leserechte.", rule.getId(),
+                    "requirementKey"));
+            case FOUND, UNKNOWN -> { }
+        }
     }
 
     /** The version number has to tell consumers what the change means for them. */
@@ -137,6 +154,8 @@ public class MappingValidator {
         }
         if (rule.getRequirementKey() == null) {
             issues.add(warning("REQUIREMENT_MISSING", "Es ist keine Anforderung verknüpft.", id, "requirementKey"));
+        } else {
+            validateRequirement(rule, issues);
         }
 
         var hasSource = rule.getSourceDataset() != null && rule.getSourceColumn() != null;

@@ -10,6 +10,7 @@ import {
   ruleIndexOf,
 } from "./api";
 import { ChangePanel, DdlStatusLine } from "./ChangePanel";
+import { IntegrationPanel } from "./IntegrationPanel";
 import { STATUS_LABELS } from "./labels";
 import { ReviewPanel } from "./ReviewPanel";
 import { emptyRule, RuleGrid } from "./RuleGrid";
@@ -268,6 +269,8 @@ export function MappingEditor({ id, me, onBack, onOpenProduct, onDirtyChange }: 
           run={run}
         />
       </div>
+
+      <IntegrationPanel subjectId={current.id} revision={current.version} me={me} />
 
       <section className="panel" aria-label="Verwendet von">
         <h2>Verwendet von</h2>

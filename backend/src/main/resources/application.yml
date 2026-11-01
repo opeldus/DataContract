@@ -37,6 +37,18 @@ app:
     path: ${DDL_PATH:}
     username: ${DDL_USERNAME:}
     token: ${DDL_TOKEN:}
+  # Address of this application, used for links from Jira and Confluence back to it.
+  public-url: ${APP_PUBLIC_URL:}
+  # Jira and Confluence Cloud use the same site and an API token with e-mail address. Without a URL or space key the
+  # respective integration stays off.
+  atlassian:
+    base-url: ${ATLASSIAN_URL:}
+    email: ${ATLASSIAN_EMAIL:}
+    api-token: ${ATLASSIAN_API_TOKEN:}
+    confluence-space-key: ${CONFLUENCE_SPACE_KEY:}
+    confluence-parent-page-id: ${CONFLUENCE_PARENT_PAGE_ID:}
+    refresh-interval: PT15M
+    task-interval: PT30S
   git:
     workdir: ${GIT_WORKDIR:./data/artifacts}
     remote-url: ${GIT_REMOTE_URL:}

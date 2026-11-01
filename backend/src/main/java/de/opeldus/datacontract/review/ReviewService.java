@@ -5,6 +5,7 @@ import static de.opeldus.datacontract.common.ApiExceptions.notFound;
 
 import de.opeldus.datacontract.artifact.ArtifactService;
 import de.opeldus.datacontract.change.ContractSnapshot;
+import de.opeldus.datacontract.integration.IntegrationTaskPlanner;
 import de.opeldus.datacontract.mapping.ContractVersion;
 import de.opeldus.datacontract.mapping.ContractVersionRepository;
 import de.opeldus.datacontract.mapping.Mapping;
@@ -26,16 +27,18 @@ public class ReviewService {
     private final MappingValidator validator;
     private final ArtifactService artifacts;
     private final ReviewWorkflow workflow;
+    private final IntegrationTaskPlanner integrationTasks;
 
     public ReviewService(MappingRepository mappings, ContractVersionRepository contractVersions,
             MappingService mappingService, MappingValidator validator, ArtifactService artifacts,
-            ReviewWorkflow workflow) {
+            ReviewWorkflow workflow, IntegrationTaskPlanner integrationTasks) {
         this.mappings = mappings;
         this.contractVersions = contractVersions;
         this.mappingService = mappingService;
         this.validator = validator;
         this.artifacts = artifacts;
         this.workflow = workflow;
+        this.integrationTasks = integrationTasks;
     }
 
     @Transactional
@@ -82,11 +85,13 @@ public class ReviewService {
     @Transactional
     public MappingDetail publish(UUID id, String actor) {
         var mapping = load(id);
+        var previousVersion = mapping.getPublishedVersion();
         var generated = artifacts.generate(mapping);
         var title = mapping.getContractName() + " " + mapping.getContractVersion();
         var commit = workflow.publish(mapping, generated, artifacts.contentHash(generated), title, actor);
         contractVersions.save(new ContractVersion(mapping.getId(), mapping.getContractVersion(), commit,
                 ContractSnapshot.of(mapping).toJson()));
+        integrationTasks.planContract(mapping, previousVersion);
         return saved(mapping);
     }
 

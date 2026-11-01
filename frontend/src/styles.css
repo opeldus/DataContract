@@ -172,3 +172,15 @@ select:disabled { background: var(--bg); color: var(--muted); }
 .change-table .value { overflow-wrap: anywhere; }
 .change-table del { color: var(--error); }
 .change-table ins { color: var(--ok); text-decoration: none; }
+
+.task-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.task-list li { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.task-state { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.78rem; background: var(--bg); }
+.task-DONE { background: var(--ok-bg); color: var(--ok); }
+.task-FAILED { background: var(--error-bg); color: var(--error); font-weight: 600; }
+.task-PENDING { background: var(--warning-bg); color: var(--warning); }
+.trace-table { width: 100%; border-collapse: collapse; min-width: 54rem; }
+.trace-table th { text-align: left; font-size: 0.82rem; color: var(--muted); padding: 0.4rem; border-bottom: 1px solid var(--border); }
+.trace-table td { padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--bg); vertical-align: top; }
+.trace-table ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.2rem; }
+.trace-filter { max-width: 26rem; margin-bottom: 0.75rem; }

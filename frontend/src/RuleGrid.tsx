@@ -193,7 +193,18 @@ export function RuleGrid({ rules, issues, editable, selectedRuleId, onChange, on
               </td>
               {textCell(rule, index, "transformation", "Transformation")}
               {textCell(rule, index, "description", "Beschreibung")}
-              {textCell(rule, index, "requirementKey", "Anforderung")}
+              <td className={cellClass(rule, "requirementKey")} title={cellTitle(rule, "requirementKey")}>
+                <Autocomplete
+                  label={`Anforderung, Zeile ${index + 1}`}
+                  disabled={!editable}
+                  value={rule.requirementKey ?? ""}
+                  search={async (query) =>
+                    (await api.searchRequirements(query)).map((issue) => ({ value: issue.key, hint: issue.summary }))
+                  }
+                  onChange={(value) => setField(index, "requirementKey", value || null)}
+                  onPaste={(event) => handlePaste(event, index, "requirementKey")}
+                />
+              </td>
               <td>
                 {editable && (
                   <button

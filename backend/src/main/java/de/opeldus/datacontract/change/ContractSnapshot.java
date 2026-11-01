@@ -35,7 +35,7 @@ public record ContractSnapshot(String targetTable, String domain, String ownerTe
         }
     }
 
-    static ContractSnapshot fromJson(String json) {
+    public static ContractSnapshot fromJson(String json) {
         try {
             return JSON.readValue(json, ContractSnapshot.class);
         } catch (JsonProcessingException exception) {

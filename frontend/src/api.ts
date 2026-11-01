@@ -185,6 +185,57 @@ export interface DdlStatus {
   error: string | null;
 }
 
+export interface IntegrationStatus {
+  jira: boolean;
+  confluence: boolean;
+  publicUrl: boolean;
+}
+
+export interface RequirementSuggestion {
+  key: string;
+  summary: string;
+}
+
+export interface IntegrationTask {
+  id: string;
+  kind: "ISSUE_LINK" | "ISSUE_UNLINK" | "DOCUMENTATION_PAGE";
+  target: string | null;
+  state: "PENDING" | "DONE" | "FAILED";
+  attempts: number;
+  lastError: string | null;
+  nextAttemptAt: string;
+  updatedAt: string;
+}
+
+export interface SubjectTasks {
+  pageUrl: string | null;
+  tasks: IntegrationTask[];
+}
+
+export interface TraceEntry {
+  key: string;
+  url: string | null;
+  check: "FOUND" | "NOT_FOUND" | "UNKNOWN" | "INVALID_FORMAT";
+  summary: string | null;
+  status: string | null;
+  statusCategory: string | null;
+  type: string | null;
+  rules: {
+    mappingId: string;
+    mappingName: string;
+    contractName: string;
+    contractVersion: string;
+    status: MappingStatus;
+    targetColumn: string | null;
+  }[];
+  products: { productId: string; productName: string; productTitle: string }[];
+}
+
+export interface Trace {
+  requirements: TraceEntry[];
+  rulesWithoutRequirement: number;
+}
+
 /** The same review endpoints exist below /api/mappings/{id} and /api/products/{id}. */
 export interface ReviewActions<T> {
   submit: () => Promise<T>;
@@ -303,6 +354,14 @@ export const api = {
     return request<ImportResult>(`/api/mappings/${id}/import`, { method: "POST", body });
   },
   preview: (id: string) => request<PreviewFile[]>(`/api/mappings/${id}/preview`),
+
+  integrationStatus: () => request<IntegrationStatus>("/api/integrations/status"),
+  searchRequirements: (q: string) =>
+    request<RequirementSuggestion[]>(`/api/requirements/search?${new URLSearchParams({ q })}`),
+  trace: () => request<Trace>("/api/requirements"),
+  integrationTasks: (subjectId: string) =>
+    request<SubjectTasks>(`/api/integrations/tasks?${new URLSearchParams({ subjectId })}`),
+  retryIntegrationTask: (id: string) => jsonRequest<void>(`/api/integrations/tasks/${id}/retry`, "POST"),
 
   changes: (id: string) => request<ChangeReport>(`/api/mappings/${id}/changes`),
   ddlStatus: () => request<DdlStatus>("/api/ddl/status"),

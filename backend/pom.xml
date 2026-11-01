@@ -15,6 +15,13 @@
   <artifactId>datacontract-backend</artifactId>
   <version>0.1.0-SNAPSHOT</version>
 
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+
   <properties>
     <java.version>17</java.version>
     <jgit.version>7.8.0.202609011348-r</jgit.version>

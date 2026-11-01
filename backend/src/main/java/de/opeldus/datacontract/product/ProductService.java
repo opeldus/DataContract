@@ -7,6 +7,7 @@ import static de.opeldus.datacontract.common.ApiExceptions.notFound;
 import de.opeldus.datacontract.artifact.ArtifactService;
 import de.opeldus.datacontract.artifact.GeneratedArtifact;
 import de.opeldus.datacontract.artifact.OdpsProductGenerator;
+import de.opeldus.datacontract.integration.IntegrationTaskPlanner;
 import de.opeldus.datacontract.mapping.MappingDtos.EventDto;
 import de.opeldus.datacontract.mapping.MappingDtos.PreviewFile;
 import de.opeldus.datacontract.mapping.MappingRepository;
@@ -39,10 +40,11 @@ public class ProductService {
     private final OdpsProductGenerator generator;
     private final ArtifactService artifacts;
     private final ReviewWorkflow workflow;
+    private final IntegrationTaskPlanner integrationTasks;
 
     public ProductService(DataProductRepository products, MappingRepository mappings, ReviewEventRepository events,
             ProductValidator validator, OdpsProductGenerator generator, ArtifactService artifacts,
-            ReviewWorkflow workflow) {
+            ReviewWorkflow workflow, IntegrationTaskPlanner integrationTasks) {
         this.products = products;
         this.mappings = mappings;
         this.events = events;
@@ -50,6 +52,7 @@ public class ProductService {
         this.generator = generator;
         this.artifacts = artifacts;
         this.workflow = workflow;
+        this.integrationTasks = integrationTasks;
     }
 
     @Transactional(readOnly = true)
@@ -146,6 +149,7 @@ public class ProductService {
         var title = product.getProductName() + " " + product.getProductVersion();
         workflow.publish(product, List.<GeneratedArtifact>of(artifact), artifacts.contentHash(List.of(artifact)), title,
                 actor);
+        integrationTasks.planProduct(product);
         return saved(product);
     }
 

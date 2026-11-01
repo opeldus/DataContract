@@ -7,6 +7,7 @@ import {
   type ProductDetail,
   reviewActions,
 } from "./api";
+import { IntegrationPanel } from "./IntegrationPanel";
 import { PRODUCT_TYPES, STATUS_LABELS } from "./labels";
 import { PortTable } from "./PortTable";
 import { ReviewPanel } from "./ReviewPanel";
@@ -216,6 +217,8 @@ export function ProductEditor({ id, me, onBack, onDirtyChange }: Props) {
           run={run}
         />
       </div>
+
+      <IntegrationPanel subjectId={current.id} revision={current.version} me={me} />
     </main>
   );
 }

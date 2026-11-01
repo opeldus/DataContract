@@ -5,13 +5,8 @@ import { MappingEditor } from "./MappingEditor";
 import { MappingList } from "./MappingList";
 import { ProductEditor } from "./ProductEditor";
 import { ProductList } from "./ProductList";
-
-type Page =
-  | { view: "mappings" }
-  | { view: "mapping"; id: string }
-  | { view: "products" }
-  | { view: "product"; id: string }
-  | { view: "graph" };
+import { RequirementTrace } from "./RequirementTrace";
+import { fromHash, type Page, toHash } from "./routes";
 
 function Login({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");
@@ -55,9 +50,11 @@ function Login({ onLogin }: { onLogin: () => void }) {
 
 export function App() {
   const [me, setMe] = useState<Me | null>(null);
-  const [page, setPage] = useState<Page>({ view: "mappings" });
+  const [page, setPage] = useState<Page>(() => fromHash(window.location.hash));
   const [error, setError] = useState<string | null>(null);
   const dirty = useRef(false);
+  const currentPage = useRef(page);
+  currentPage.current = page;
   const onDirtyChange = useCallback((value: boolean) => {
     dirty.current = value;
   }, []);
@@ -68,6 +65,24 @@ export function App() {
 
   useEffect(refreshUser, []);
 
+  /** Covers the browser's back button and links opened from Jira or Confluence. */
+  useEffect(() => {
+    const onHashChange = () => {
+      const next = fromHash(window.location.hash);
+      if (toHash(currentPage.current) === toHash(next)) {
+        return;
+      }
+      if (!dirty.current || window.confirm("Nicht gespeicherte Änderungen verwerfen?")) {
+        dirty.current = false;
+        setPage(next);
+      } else {
+        window.history.pushState(null, "", toHash(currentPage.current));
+      }
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   function confirmLeave() {
     return !dirty.current || window.confirm("Nicht gespeicherte Änderungen verwerfen?");
   }
@@ -76,6 +91,7 @@ export function App() {
     if (confirmLeave()) {
       dirty.current = false;
       setPage(next);
+      window.history.pushState(null, "", toHash(next));
     }
   }
 
@@ -100,6 +116,7 @@ export function App() {
             [
               ["mappings", "Mappings"],
               ["products", "Datenprodukte"],
+              ["requirements", "Anforderungen"],
               ["graph", "Abhängigkeiten"],
             ] as const
           ).map(([view, label]) => (
@@ -123,7 +140,6 @@ export function App() {
             }
             dirty.current = false;
             api.logout().finally(() => {
-              setPage({ view: "mappings" });
               setMe(null);
               refreshUser();
             });
@@ -151,6 +167,12 @@ export function App() {
           me={me}
           onBack={() => navigate({ view: "products" })}
           onDirtyChange={onDirtyChange}
+        />
+      )}
+      {page.view === "requirements" && (
+        <RequirementTrace
+          onOpenMapping={(id) => navigate({ view: "mapping", id })}
+          onOpenProduct={(id) => navigate({ view: "product", id })}
         />
       )}
       {page.view === "graph" && (

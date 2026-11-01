@@ -3,11 +3,13 @@ package de.opeldus.datacontract.mapping;
 import static de.opeldus.datacontract.common.ApiExceptions.badRequest;
 
 import de.opeldus.datacontract.change.ChangeReport;
+import de.opeldus.datacontract.integration.RequirementDirectory;
 import de.opeldus.datacontract.mapping.MappingDtos.CreateMappingRequest;
 import de.opeldus.datacontract.mapping.MappingDtos.ImportResult;
 import de.opeldus.datacontract.mapping.MappingDtos.MappingDetail;
 import de.opeldus.datacontract.mapping.MappingDtos.MappingSummary;
 import de.opeldus.datacontract.mapping.MappingDtos.PreviewFile;
+import de.opeldus.datacontract.mapping.MappingDtos.RuleDto;
 import de.opeldus.datacontract.mapping.MappingDtos.UpdateMappingRequest;
 import de.opeldus.datacontract.security.CurrentUser;
 import jakarta.validation.Valid;
@@ -33,10 +35,12 @@ public class MappingController {
 
     private final MappingService service;
     private final CurrentUser currentUser;
+    private final RequirementDirectory requirements;
 
-    public MappingController(MappingService service, CurrentUser currentUser) {
+    public MappingController(MappingService service, CurrentUser currentUser, RequirementDirectory requirements) {
         this.service = service;
         this.currentUser = currentUser;
+        this.requirements = requirements;
     }
 
     @GetMapping
@@ -59,6 +63,9 @@ public class MappingController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('EDITOR')")
     public MappingDetail update(@PathVariable UUID id, @Valid @RequestBody UpdateMappingRequest request) {
+        if (request.rules() != null) {
+            requirements.resolveUnknown(request.rules().stream().map(RuleDto::requirementKey).toList());
+        }
         return service.update(id, request, currentUser.username());
     }
 
@@ -66,7 +73,9 @@ public class MappingController {
     @PreAuthorize("hasRole('EDITOR')")
     public ImportResult importExcel(@PathVariable UUID id, @RequestParam("file") MultipartFile file) {
         try (var input = file.getInputStream()) {
-            return service.importExcel(id, input, currentUser.username());
+            var result = service.importExcel(id, input, currentUser.username());
+            requirements.resolveUnknown(result.mapping().rules().stream().map(RuleDto::requirementKey).toList());
+            return new ImportResult(result.imported(), result.skippedRows(), result.ignoredColumns(), service.get(id));
         } catch (IOException exception) {
             throw badRequest("Die Datei konnte nicht gelesen werden.");
         }

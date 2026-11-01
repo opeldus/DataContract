@@ -18,8 +18,11 @@ keinen Git-Zugang.
 - Fachlicher Vergleich mit der letzten veröffentlichten Version: Einstufung als inkompatibel, inhaltlich oder
   Dokumentation, passende Versionserhöhung und betroffene Datenprodukte
 - Vergleich des Ziels mit DDL-Dateien aus Git, ohne Datenbankzugriff
+- Jira Cloud: Autovervollständigung und Prüfung der Anforderungen, Links vom Vorgang zum Contract
+- Confluence Cloud: generierte Seiten für Contracts und Datenprodukte
+- Rückverfolgung von der Anforderung über Regel und Contract bis zum Datenprodukt
 
-Noch nicht enthalten: Releases, Jira und Confluence, SSO. Die Anwender stehen bisher in der
+Noch nicht enthalten: Releases, SSO. Die Anwender stehen bisher in der
 Konfiguration.
 
 ## Lokal starten
@@ -68,11 +71,29 @@ ohne DDL erzeugt nur einen Hinweis.
 Die Vorlage `ci/artifact-repo-ci.yml` prüft veröffentlichte Contracts mit der Data Contract CLI und Datenprodukte gegen
 das ODPS-Schema.
 
+### Jira und Confluence Cloud
+
+| Variable | Bedeutung |
+|---|---|
+| `ATLASSIAN_URL` | Atlassian-Site, zum Beispiel `https://firma.atlassian.net`; ohne URL bleibt beides aus |
+| `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN` | Technischer Benutzer mit klassischem API-Token ohne Scopes |
+| `CONFLUENCE_SPACE_KEY`, `CONFLUENCE_PARENT_PAGE_ID` | Zielbereich und optional die übergeordnete Seite; ohne Bereich entfällt Confluence |
+| `APP_PUBLIC_URL` | Adresse dieser Anwendung; ohne sie entstehen keine Links in Jira |
+
+Der technische Benutzer braucht in Jira die Rechte *Browse projects* und *Link issues*, in Confluence Schreibrechte im
+Zielbereich. Jira bleibt für Vorgänge führend: Die Anwendung liest sie nur und aktualisiert ihre Kopie alle 15 Minuten.
+
+Die Anwendung ruft Atlassian nur auf und braucht deshalb keine Verbindung von außen. Links und Seiten werden zusammen
+mit der Veröffentlichung als Aufgabe gespeichert und danach mit Wiederholungen übertragen, ein Ausfall stört das
+Veröffentlichen also nicht. Generierte Seiten tragen eine Kennung, eine fremde Seite mit gleichem Titel wird nie
+überschrieben. Betrieben wird das bisher für genau eine laufende Instanz.
+
 ## Erweitern
 
 - `ArtifactGenerator`: weitere Dateien je Mapping erzeugen, zum Beispiel dbt
 - `CatalogProvider`: weitere Metadatenquellen anbinden
 - `DdlSource`: DDL aus anderen Quellen lesen
+- `IssueTracker`, `DocumentationPublisher`: andere Systeme für Anforderungen und Dokumentation anbinden
 
 Beans dieser Typen werden automatisch eingebunden.
 
@@ -84,3 +105,8 @@ cd frontend && npm test && npm run build
 ```
 
 `PostgresMigrationTest` startet ein eingebettetes PostgreSQL und braucht kein Docker.
+
+## Lizenz
+
+Apache License 2.0, siehe [LICENSE](LICENSE). Die Schemas in `backend/src/main/resources/schema` stammen aus den
+Standards ODCS und ODPS des Bitol-Projekts (Linux Foundation) und stehen ebenfalls unter Apache 2.0.
