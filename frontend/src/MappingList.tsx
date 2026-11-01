@@ -1,17 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { api, type MappingSummary, type Me } from "./api";
-import { STATUS_LABELS } from "./labels";
-
-function toContractName(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+import { STATUS_LABELS, toTechnicalName } from "./labels";
 
 interface Props {
   me: Me;
@@ -31,7 +20,7 @@ export function MappingList({ me, onOpen }: Props) {
     event.preventDefault();
     setError(null);
     try {
-      const created = await api.createMapping(name.trim(), toContractName(name));
+      const created = await api.createMapping(name.trim(), toTechnicalName(name));
       onOpen(created.id);
     } catch (cause) {
       setError((cause as Error).message);
@@ -48,7 +37,7 @@ export function MappingList({ me, onOpen }: Props) {
             <span>Neues Mapping</span>
             <input value={name} onChange={(event) => setName(event.target.value)} placeholder="z. B. Kundenstamm" />
           </label>
-          <button type="submit" className="primary" disabled={!toContractName(name)}>Anlegen</button>
+          <button type="submit" className="primary" disabled={!toTechnicalName(name)}>Anlegen</button>
         </form>
       )}
       <section className="panel">

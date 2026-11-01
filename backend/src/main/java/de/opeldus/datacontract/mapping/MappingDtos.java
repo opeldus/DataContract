@@ -2,6 +2,7 @@ package de.opeldus.datacontract.mapping;
 
 import de.opeldus.datacontract.review.ReviewEvent;
 import de.opeldus.datacontract.review.ReviewEventType;
+import de.opeldus.datacontract.review.ReviewStatus;
 import de.opeldus.datacontract.validation.ValidationIssue;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -50,7 +51,7 @@ public final class MappingDtos {
     }
 
     public record MappingSummary(
-            UUID id, String name, String contractName, String contractVersion, MappingStatus status,
+            UUID id, String name, String contractName, String contractVersion, ReviewStatus status,
             String ownerTeam, int ruleCount, Instant updatedAt) {
 
         static MappingSummary from(Mapping mapping) {
@@ -62,7 +63,7 @@ public final class MappingDtos {
 
     public record MappingDetail(
             UUID id, String name, String contractName, String contractVersion, String domain, String description,
-            String targetTable, String ownerTeam, MappingStatus status, String publishedVersion,
+            String targetTable, String ownerTeam, ReviewStatus status, String publishedVersion,
             String publishedCommit, String createdBy, Instant updatedAt, long version, List<RuleDto> rules,
             List<ValidationIssue> issues, List<EventDto> events, String contentHash) {}
 

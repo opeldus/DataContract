@@ -38,6 +38,16 @@ export interface ReviewEvent {
   createdAt: string;
 }
 
+/** What the review panel needs from anything that goes through the review workflow. */
+export interface Reviewable {
+  status: MappingStatus;
+  publishedVersion: string | null;
+  publishedCommit: string | null;
+  issues: ValidationIssue[];
+  events: ReviewEvent[];
+  contentHash: string;
+}
+
 export interface MappingSummary {
   id: string;
   name: string;
@@ -49,7 +59,7 @@ export interface MappingSummary {
   updatedAt: string;
 }
 
-export interface MappingDetail {
+export interface MappingDetail extends Reviewable {
   id: string;
   name: string;
   contractName: string;
@@ -58,16 +68,106 @@ export interface MappingDetail {
   description: string | null;
   targetTable: string | null;
   ownerTeam: string | null;
-  status: MappingStatus;
-  publishedVersion: string | null;
-  publishedCommit: string | null;
   createdBy: string;
   updatedAt: string;
   version: number;
   rules: Rule[];
-  issues: ValidationIssue[];
-  events: ReviewEvent[];
-  contentHash: string;
+}
+
+export type PortDirection = "INPUT" | "OUTPUT";
+
+export interface Port {
+  id: string | null;
+  direction: PortDirection;
+  name: string | null;
+  contractMappingId: string | null;
+  contractName: string | null;
+  contractVersion: string | null;
+}
+
+export interface ProductSummary {
+  id: string;
+  name: string;
+  productName: string;
+  productVersion: string;
+  status: MappingStatus;
+  ownerTeam: string | null;
+  inputPorts: number;
+  outputPorts: number;
+  updatedAt: string;
+}
+
+export interface ProductDetail extends Reviewable {
+  id: string;
+  name: string;
+  productName: string;
+  productVersion: string;
+  domain: string | null;
+  productType: string | null;
+  purpose: string | null;
+  ownerTeam: string | null;
+  createdBy: string;
+  updatedAt: string;
+  version: number;
+  ports: Port[];
+}
+
+export interface ContractOption {
+  mappingId: string;
+  name: string;
+  domain: string | null;
+  publishedVersions: string[];
+}
+
+export interface ContractConsumer {
+  productId: string;
+  productName: string;
+  productTitle: string;
+  productStatus: MappingStatus;
+  direction: PortDirection;
+  portName: string | null;
+  contractVersion: string | null;
+}
+
+export interface GraphNode {
+  id: string;
+  kind: "CONTRACT" | "PRODUCT";
+  label: string;
+  subjectId: string;
+  status: MappingStatus;
+  version: string;
+}
+
+export interface GraphEdge {
+  from: string;
+  to: string;
+  version: string | null;
+}
+
+export interface Graph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+/** The same review endpoints exist below /api/mappings/{id} and /api/products/{id}. */
+export interface ReviewActions<T> {
+  submit: () => Promise<T>;
+  approve: (contentHash: string) => Promise<T>;
+  requestChanges: (comment: string) => Promise<T>;
+  comment: (comment: string, ruleId: string | null) => Promise<T>;
+  reopen: () => Promise<T>;
+  publish: () => Promise<T>;
+}
+
+export function reviewActions<T>(basePath: string): ReviewActions<T> {
+  return {
+    submit: () => jsonRequest<T>(`${basePath}/submit`, "POST"),
+    approve: (contentHash) => jsonRequest<T>(`${basePath}/approve`, "POST", { contentHash }),
+    requestChanges: (comment) => jsonRequest<T>(`${basePath}/request-changes`, "POST", { comment }),
+    comment: (comment, ruleId) => jsonRequest<T>(`${basePath}/comments`, "POST", { comment, ruleId }),
+    reopen: () => jsonRequest<T>(`${basePath}/reopen`, "POST"),
+    publish: () => jsonRequest<T>(`${basePath}/publish`, "POST"),
+  };
 }
 
 export interface ImportResult {
@@ -95,7 +195,7 @@ export interface ColumnSuggestion {
 }
 
 /** Unsaved rules have no id yet, so a null id must never match them. */
-export function ruleIndexOf(mapping: MappingDetail, ruleId: string | null): number {
+export function ruleIndexOf(mapping: Pick<MappingDetail, "rules">, ruleId: string | null): number {
   return ruleId === null ? -1 : mapping.rules.findIndex((rule) => rule.id === ruleId);
 }
 
@@ -168,15 +268,26 @@ export const api = {
   },
   preview: (id: string) => request<PreviewFile[]>(`/api/mappings/${id}/preview`),
 
-  submit: (id: string) => jsonRequest<MappingDetail>(`/api/mappings/${id}/submit`, "POST"),
-  approve: (id: string, contentHash: string) =>
-    jsonRequest<MappingDetail>(`/api/mappings/${id}/approve`, "POST", { contentHash }),
-  requestChanges: (id: string, comment: string) =>
-    jsonRequest<MappingDetail>(`/api/mappings/${id}/request-changes`, "POST", { comment }),
-  comment: (id: string, comment: string, ruleId: string | null) =>
-    jsonRequest<MappingDetail>(`/api/mappings/${id}/comments`, "POST", { comment, ruleId }),
-  reopen: (id: string) => jsonRequest<MappingDetail>(`/api/mappings/${id}/reopen`, "POST"),
-  publish: (id: string) => jsonRequest<MappingDetail>(`/api/mappings/${id}/publish`, "POST"),
+  consumers: (id: string) => request<ContractConsumer[]>(`/api/mappings/${id}/consumers`),
+
+  listProducts: () => request<ProductSummary[]>("/api/products"),
+  createProduct: (name: string, productName: string) =>
+    jsonRequest<ProductDetail>("/api/products", "POST", { name, productName }),
+  getProduct: (id: string) => request<ProductDetail>(`/api/products/${id}`),
+  updateProduct: (product: ProductDetail) =>
+    jsonRequest<ProductDetail>(`/api/products/${product.id}`, "PUT", {
+      version: product.version,
+      name: product.name,
+      productVersion: product.productVersion,
+      domain: product.domain,
+      productType: product.productType,
+      purpose: product.purpose,
+      ownerTeam: product.ownerTeam,
+      ports: product.ports,
+    }),
+  previewProduct: (id: string) => request<PreviewFile[]>(`/api/products/${id}/preview`),
+  contracts: () => request<ContractOption[]>("/api/contracts"),
+  graph: () => request<Graph>("/api/graph"),
 
   searchDatasets: (q: string) =>
     request<DatasetSuggestion[]>(`/api/catalog/datasets?${new URLSearchParams({ q })}`),

@@ -116,3 +116,47 @@ summary { cursor: pointer; }
 .list { width: 100%; border-collapse: collapse; }
 .list th { text-align: left; color: var(--muted); font-size: 0.82rem; padding: 0.4rem; border-bottom: 1px solid var(--border); }
 .list td { padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--bg); }
+
+.nav-tabs { display: flex; gap: 0.25rem; margin-left: 1rem; flex-wrap: wrap; }
+.nav-tabs button { border-color: transparent; background: none; }
+.nav-tabs button[aria-current="page"] { background: var(--bg); border-color: var(--border); font-weight: 600; }
+
+select {
+  font: inherit;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+}
+select:disabled { background: var(--bg); color: var(--muted); }
+
+.port-section + .port-section { margin-top: 1.1rem; }
+.port-table { border-collapse: collapse; width: 100%; min-width: 40rem; }
+.port-table th { text-align: left; font-size: 0.82rem; color: var(--muted); padding: 0.3rem; border-bottom: 1px solid var(--border); }
+.port-table td { padding: 0.2rem; border-bottom: 1px solid var(--bg); }
+.port-table .col-version { width: 11rem; }
+.port-table .col-action { width: 2.5rem; }
+.port-wrapper { overflow-x: auto; padding-bottom: 12rem; margin-bottom: -12rem; }
+.consumers { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+
+.graph-scroll { overflow-x: auto; }
+.graph-legend { display: flex; flex-wrap: wrap; gap: 1rem; color: var(--muted); font-size: 0.85rem; margin-bottom: 0.5rem; }
+.graph-legend i { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 3px; margin-right: 0.35rem; vertical-align: -1px; }
+.legend-contract { background: var(--surface); border: 1.5px solid var(--accent); }
+.legend-product { background: var(--accent); }
+.graph-node { cursor: pointer; }
+.graph-node:focus-visible { outline: none; }
+.graph-node:focus-visible rect { stroke-width: 3; }
+.graph-node rect { stroke: var(--accent); stroke-width: 1.5; fill: var(--surface); }
+.graph-node.product rect { fill: var(--accent); }
+.graph-node text { fill: var(--text); font-size: 12px; }
+.graph-node.product text { fill: var(--accent-text); }
+.graph-node .version { font-size: 10.5px; opacity: 0.8; }
+.graph-node.dimmed { opacity: 0.3; }
+.graph-node.selected rect { stroke: #d8a200; stroke-width: 3; }
+.graph-edge { fill: none; stroke: #9aa5b4; stroke-width: 1.5; }
+.graph-edge.impact { stroke: #d8a200; stroke-width: 2.5; }
+.graph-edge.dimmed { opacity: 0.25; }
+.graph-arrow { fill: #9aa5b4; }

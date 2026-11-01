@@ -1,7 +1,17 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { api, type Me } from "./api";
+import { DependencyGraph } from "./DependencyGraph";
 import { MappingEditor } from "./MappingEditor";
 import { MappingList } from "./MappingList";
+import { ProductEditor } from "./ProductEditor";
+import { ProductList } from "./ProductList";
+
+type Page =
+  | { view: "mappings" }
+  | { view: "mapping"; id: string }
+  | { view: "products" }
+  | { view: "product"; id: string }
+  | { view: "graph" };
 
 function Login({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");
@@ -45,14 +55,29 @@ function Login({ onLogin }: { onLogin: () => void }) {
 
 export function App() {
   const [me, setMe] = useState<Me | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [page, setPage] = useState<Page>({ view: "mappings" });
   const [error, setError] = useState<string | null>(null);
+  const dirty = useRef(false);
+  const onDirtyChange = useCallback((value: boolean) => {
+    dirty.current = value;
+  }, []);
 
   function refreshUser() {
     api.me().then(setMe).catch((cause: Error) => setError(cause.message));
   }
 
   useEffect(refreshUser, []);
+
+  function confirmLeave() {
+    return !dirty.current || window.confirm("Nicht gespeicherte Änderungen verwerfen?");
+  }
+
+  function navigate(next: Page) {
+    if (confirmLeave()) {
+      dirty.current = false;
+      setPage(next);
+    }
+  }
 
   if (error) {
     return <main className="page"><p role="alert" className="error">{error}</p></main>;
@@ -64,29 +89,76 @@ export function App() {
     return <Login onLogin={refreshUser} />;
   }
 
+  const section = page.view === "mapping" ? "mappings" : page.view === "product" ? "products" : page.view;
+
   return (
     <>
       <nav className="topbar">
         <strong>DataContract</strong>
+        <div className="nav-tabs">
+          {(
+            [
+              ["mappings", "Mappings"],
+              ["products", "Datenprodukte"],
+              ["graph", "Abhängigkeiten"],
+            ] as const
+          ).map(([view, label]) => (
+            <button
+              key={view}
+              type="button"
+              aria-current={section === view ? "page" : undefined}
+              onClick={() => navigate({ view })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <span className="spacer" />
         <span>{me.displayName}</span>
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            if (!confirmLeave()) {
+              return;
+            }
+            dirty.current = false;
             api.logout().finally(() => {
-              setOpenId(null);
+              setPage({ view: "mappings" });
               setMe(null);
               refreshUser();
-            })
-          }
+            });
+          }}
         >
           Abmelden
         </button>
       </nav>
-      {openId ? (
-        <MappingEditor key={openId} id={openId} me={me} onBack={() => setOpenId(null)} />
-      ) : (
-        <MappingList me={me} onOpen={setOpenId} />
+      {page.view === "mappings" && <MappingList me={me} onOpen={(id) => navigate({ view: "mapping", id })} />}
+      {page.view === "mapping" && (
+        <MappingEditor
+          key={page.id}
+          id={page.id}
+          me={me}
+          onBack={() => navigate({ view: "mappings" })}
+          onOpenProduct={(id) => navigate({ view: "product", id })}
+          onDirtyChange={onDirtyChange}
+        />
+      )}
+      {page.view === "products" && <ProductList me={me} onOpen={(id) => navigate({ view: "product", id })} />}
+      {page.view === "product" && (
+        <ProductEditor
+          key={page.id}
+          id={page.id}
+          me={me}
+          onBack={() => navigate({ view: "products" })}
+          onDirtyChange={onDirtyChange}
+        />
+      )}
+      {page.view === "graph" && (
+        <DependencyGraph
+          onOpen={(node) =>
+            navigate(node.kind === "PRODUCT" ? { view: "product", id: node.subjectId } : { view: "mapping", id: node.subjectId })
+          }
+        />
       )}
     </>
   );

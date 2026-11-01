@@ -1,12 +1,12 @@
-# Vorlage für das Artefakt-Repo, in das die Anwendung Contracts veröffentlicht.
+# Vorlage für das Artefakt-Repo, in das die Anwendung Contracts und Datenprodukte veröffentlicht.
 # Dort ablegen als .github/workflows/contracts.yml.
 name: Data Contracts
 
 on:
   push:
-    paths: ["contracts/**"]
+    paths: ["contracts/**", "products/**"]
   pull_request:
-    paths: ["contracts/**"]
+    paths: ["contracts/**", "products/**"]
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install "datacontract-cli==1.2.9"
+      - run: pip install "datacontract-cli==1.2.9" "check-jsonschema==0.39.0"
       - name: Contracts gegen das ODCS-Schema prüfen
         run: |
           status=0
@@ -29,3 +29,11 @@ jobs:
             echo "::endgroup::"
           done < <(find contracts -name odcs.yaml)
           exit $status
+      - name: Datenprodukte gegen das ODPS-Schema prüfen
+        run: |
+          products=$(find products -name odps.yaml 2>/dev/null)
+          if [ -n "$products" ]; then
+            check-jsonschema \
+              --schemafile https://raw.githubusercontent.com/bitol-io/open-data-product-standard/main/schema/odps-json-schema-v1.1.0.json \
+              $products
+          fi

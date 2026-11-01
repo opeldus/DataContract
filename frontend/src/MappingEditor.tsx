@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { ApiError, api, type MappingDetail, type Me, type PreviewFile, ruleIndexOf } from "./api";
+import {
+  ApiError,
+  api,
+  type ContractConsumer,
+  type MappingDetail,
+  type Me,
+  type PreviewFile,
+  reviewActions,
+  ruleIndexOf,
+} from "./api";
 import { STATUS_LABELS } from "./labels";
 import { ReviewPanel } from "./ReviewPanel";
 import { emptyRule, RuleGrid } from "./RuleGrid";
@@ -8,9 +17,11 @@ interface Props {
   id: string;
   me: Me;
   onBack: () => void;
+  onOpenProduct: (id: string) => void;
+  onDirtyChange: (dirty: boolean) => void;
 }
 
-export function MappingEditor({ id, me, onBack }: Props) {
+export function MappingEditor({ id, me, onBack, onOpenProduct, onDirtyChange }: Props) {
   const [mapping, setMapping] = useState<MappingDetail | null>(null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -18,11 +29,17 @@ export function MappingEditor({ id, me, onBack }: Props) {
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewFile[] | null>(null);
+  const [consumers, setConsumers] = useState<ContractConsumer[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.getMapping(id).then(setMapping).catch((cause: Error) => setError(cause.message));
+    api.consumers(id).then(setConsumers).catch((cause: Error) => setError(cause.message));
   }, [id]);
+
+  useEffect(() => {
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
 
   useEffect(() => {
     if (!dirty) {
@@ -64,22 +81,14 @@ export function MappingEditor({ id, me, onBack }: Props) {
     setPreview(null);
   }
 
+  const selectedRuleIndex = ruleIndexOf(current, selectedRuleId);
   const errors = current.issues.filter((issue) => issue.severity === "ERROR");
   const warnings = current.issues.filter((issue) => issue.severity === "WARNING");
 
   return (
     <main className="page">
       <header className="toolbar">
-        <button
-          type="button"
-          onClick={() => {
-            if (!dirty || window.confirm("Nicht gespeicherte Änderungen verwerfen?")) {
-              onBack();
-            }
-          }}
-        >
-          ← Übersicht
-        </button>
+        <button type="button" onClick={onBack}>← Übersicht</button>
         <h1>{current.name}</h1>
         <span className={`status status-${current.status}`}>{STATUS_LABELS[current.status]}</span>
         <span className="spacer" />
@@ -236,14 +245,37 @@ export function MappingEditor({ id, me, onBack }: Props) {
         </section>
 
         <ReviewPanel
-          mapping={current}
+          item={current}
+          actions={reviewActions<MappingDetail>(`/api/mappings/${current.id}`)}
           me={me}
           dirty={dirty}
-          selectedRuleId={selectedRuleId}
+          target={selectedRuleIndex >= 0 ? { id: selectedRuleId!, label: `Regel ${selectedRuleIndex + 1}` } : null}
+          targetLabel={(ruleId) => {
+            const index = ruleIndexOf(current, ruleId);
+            return index >= 0 ? `Regel ${index + 1}` : null;
+          }}
           onUpdated={applyServerState}
           run={run}
         />
       </div>
+
+      <section className="panel" aria-label="Verwendet von">
+        <h2>Verwendet von</h2>
+        {consumers.length === 0 && <p className="empty">Noch kein Datenprodukt nutzt diesen Contract.</p>}
+        {consumers.length > 0 && (
+          <ul className="consumers">
+            {consumers.map((consumer) => (
+              <li key={`${consumer.productId}-${consumer.direction}-${consumer.portName}`}>
+                <button type="button" className="link" onClick={() => onOpenProduct(consumer.productId)}>
+                  {consumer.productTitle}
+                </button>{" "}
+                {consumer.direction === "INPUT" ? "liest" : "liefert"} Version {consumer.contractVersion ?? "–"}
+                {consumer.portName && <> über Port <code>{consumer.portName}</code></>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }

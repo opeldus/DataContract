@@ -27,9 +27,13 @@ public class ArtifactService {
 
     /** Pins an approval to exactly the content the reviewer saw. */
     public String contentHash(Mapping mapping) {
+        return contentHash(generate(mapping));
+    }
+
+    public String contentHash(List<GeneratedArtifact> artifacts) {
         try {
             var digest = MessageDigest.getInstance("SHA-256");
-            for (var artifact : generate(mapping)) {
+            for (var artifact : artifacts) {
                 digest.update(artifact.path().getBytes(StandardCharsets.UTF_8));
                 digest.update((byte) 0);
                 digest.update(artifact.content().getBytes(StandardCharsets.UTF_8));

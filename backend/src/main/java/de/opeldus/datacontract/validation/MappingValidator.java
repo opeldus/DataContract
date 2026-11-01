@@ -18,7 +18,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class MappingValidator {
 
-    private static final Pattern SEMVER = Pattern.compile("^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$");
     private static final Pattern IDENTIFIER = Pattern.compile("^[A-Za-z_][A-Za-z0-9_$]*$");
 
     private final CatalogSearch catalog;
@@ -66,10 +65,10 @@ public class MappingValidator {
             issues.add(error("NO_RULES", "Das Mapping enthält noch keine Regeln.", null, null));
         }
         var version = mapping.getContractVersion();
-        if (!SEMVER.matcher(version).matches()) {
+        if (!SemanticVersion.isValid(version)) {
             issues.add(error("VERSION_INVALID", "Die Version muss das Format 1.2.3 haben.", null, "contractVersion"));
         } else if (mapping.getStatus().isEditable() && mapping.getPublishedVersion() != null
-                && compareVersions(version, mapping.getPublishedVersion()) <= 0) {
+                && SemanticVersion.compare(version, mapping.getPublishedVersion()) <= 0) {
             issues.add(error("VERSION_NOT_INCREASED",
                     "Die Version muss höher sein als die veröffentlichte Version " + mapping.getPublishedVersion() + ".",
                     null, "contractVersion"));
@@ -137,17 +136,5 @@ public class MappingValidator {
             issues.add(warning("REQUIRED_FROM_NULLABLE",
                     "Das Zielfeld ist Pflicht, die Quellspalte darf aber leer sein.", id, "required"));
         }
-    }
-
-    static int compareVersions(String left, String right) {
-        var a = left.split("\\.");
-        var b = right.split("\\.");
-        for (int index = 0; index < 3; index++) {
-            int result = new java.math.BigInteger(a[index]).compareTo(new java.math.BigInteger(b[index]));
-            if (result != 0) {
-                return result;
-            }
-        }
-        return 0;
     }
 }

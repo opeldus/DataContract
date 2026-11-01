@@ -8,15 +8,15 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Append-only history of a mapping; it doubles as the audit trail and the comment thread. */
+/** Append-only history of a reviewed item; it doubles as the audit trail and the comment thread. */
 @Entity
-@Table(name = "review_event")
+@Table(name = "review_log")
 public class ReviewEvent {
 
     @Id
     private UUID id = UUID.randomUUID();
 
-    private UUID mappingId;
+    private UUID subjectId;
 
     @Enumerated(EnumType.STRING)
     private ReviewEventType type;
@@ -29,12 +29,12 @@ public class ReviewEvent {
 
     protected ReviewEvent() {}
 
-    public ReviewEvent(UUID mappingId, ReviewEventType type, String actor) {
-        this(mappingId, type, actor, null);
+    public ReviewEvent(UUID subjectId, ReviewEventType type, String actor) {
+        this(subjectId, type, actor, null);
     }
 
-    public ReviewEvent(UUID mappingId, ReviewEventType type, String actor, String comment) {
-        this.mappingId = mappingId;
+    public ReviewEvent(UUID subjectId, ReviewEventType type, String actor, String comment) {
+        this.subjectId = subjectId;
         this.type = type;
         this.actor = actor;
         this.comment = comment;
@@ -51,7 +51,7 @@ public class ReviewEvent {
     }
 
     public UUID getId() { return id; }
-    public UUID getMappingId() { return mappingId; }
+    public UUID getSubjectId() { return subjectId; }
     public ReviewEventType getType() { return type; }
     public String getActor() { return actor; }
     public String getComment() { return comment; }

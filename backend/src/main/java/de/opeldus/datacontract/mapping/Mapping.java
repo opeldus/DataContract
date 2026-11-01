@@ -1,5 +1,7 @@
 package de.opeldus.datacontract.mapping;
 
+import de.opeldus.datacontract.review.ReviewStatus;
+import de.opeldus.datacontract.review.ReviewSubject;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,7 +19,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "mapping")
-public class Mapping {
+public class Mapping implements ReviewSubject {
 
     @Id
     private UUID id = UUID.randomUUID();
@@ -31,7 +33,7 @@ public class Mapping {
     private String ownerTeam;
 
     @Enumerated(EnumType.STRING)
-    private MappingStatus status = MappingStatus.DRAFT;
+    private ReviewStatus status = ReviewStatus.DRAFT;
 
     private String publishedVersion;
     private String publishedCommit;
@@ -60,17 +62,19 @@ public class Mapping {
         this.createdBy = createdBy;
     }
 
+    @Override
     public void touch() {
         updatedAt = Instant.now();
     }
 
+    @Override
     public void markPublished(String commit) {
-        status = MappingStatus.PUBLISHED;
+        status = ReviewStatus.PUBLISHED;
         publishedVersion = contractVersion;
         publishedCommit = commit;
     }
 
-    public UUID getId() { return id; }
+    @Override public UUID getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getContractName() { return contractName; }
@@ -84,11 +88,11 @@ public class Mapping {
     public void setTargetTable(String targetTable) { this.targetTable = targetTable; }
     public String getOwnerTeam() { return ownerTeam; }
     public void setOwnerTeam(String ownerTeam) { this.ownerTeam = ownerTeam; }
-    public MappingStatus getStatus() { return status; }
-    public void setStatus(MappingStatus status) { this.status = status; }
+    @Override public ReviewStatus getStatus() { return status; }
+    @Override public void setStatus(ReviewStatus status) { this.status = status; }
     public String getPublishedVersion() { return publishedVersion; }
     public String getPublishedCommit() { return publishedCommit; }
-    public String getCreatedBy() { return createdBy; }
+    @Override public String getCreatedBy() { return createdBy; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public long getVersion() { return version; }

@@ -9,12 +9,17 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
 public class OdcsContractGenerator implements ArtifactGenerator {
 
     static final String API_VERSION = "v3.2.0";
+
+    public static String contractId(UUID mappingId) {
+        return "urn:datacontract:" + mappingId;
+    }
 
     @Override
     public GeneratedArtifact generate(Mapping mapping) {
@@ -27,7 +32,7 @@ public class OdcsContractGenerator implements ArtifactGenerator {
         var document = new LinkedHashMap<String, Object>();
         document.put("apiVersion", API_VERSION);
         document.put("kind", "DataContract");
-        document.put("id", "urn:datacontract:" + mapping.getId());
+        document.put("id", contractId(mapping.getId()));
         document.put("name", mapping.getContractName());
         document.put("version", mapping.getContractVersion());
         document.put("status", "active");

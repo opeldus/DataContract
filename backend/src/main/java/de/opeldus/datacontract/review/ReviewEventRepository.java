@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReviewEventRepository extends JpaRepository<ReviewEvent, UUID> {
 
-    List<ReviewEvent> findByMappingIdOrderByCreatedAtAsc(UUID mappingId);
+    List<ReviewEvent> findBySubjectIdOrderByCreatedAtAsc(UUID subjectId);
 }

@@ -109,7 +109,7 @@ public class MappingService {
     }
 
     public MappingDetail detail(Mapping mapping) {
-        var history = events.findByMappingIdOrderByCreatedAtAsc(mapping.getId()).stream()
+        var history = events.findBySubjectIdOrderByCreatedAtAsc(mapping.getId()).stream()
                 .map(EventDto::from)
                 .toList();
         return new MappingDetail(mapping.getId(), mapping.getName(), mapping.getContractName(),

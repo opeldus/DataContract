@@ -1,6 +1,6 @@
-package de.opeldus.datacontract.mapping;
+package de.opeldus.datacontract.review;
 
-public enum MappingStatus {
+public enum ReviewStatus {
     DRAFT,
     IN_REVIEW,
     CHANGES_REQUESTED,
