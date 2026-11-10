@@ -1,6 +1,8 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { api, type Me, type Release } from "./api";
+import { api, etlApi, type Me, type Release } from "./api";
 import { DependencyGraph } from "./DependencyGraph";
+import { EtlJobView } from "./EtlJobView";
+import { EtlOverview } from "./EtlOverview";
 import { MappingEditor } from "./MappingEditor";
 import { MappingList } from "./MappingList";
 import { ProductEditor } from "./ProductEditor";
@@ -161,7 +163,8 @@ export function App() {
     return <Login onLogin={refreshUser} />;
   }
 
-  const section = page.view === "mapping" ? "mappings" : page.view === "product" ? "products" : page.view;
+  const section =
+    page.view === "mapping" ? "mappings" : page.view === "product" ? "products" : page.view === "etlJob" ? "etl" : page.view;
 
   return (
     <>
@@ -175,6 +178,7 @@ export function App() {
               ["requirements", "Anforderungen"],
               ["releases", "Releases"],
               ["graph", "Abhängigkeiten"],
+              ["etl", "DataStage"],
             ] as const
           ).map(([view, label]) => (
             <button
@@ -252,6 +256,28 @@ export function App() {
           onChanged={refreshReleases}
           onSelect={selectRelease}
           onOpenItem={(kind, id) => navigate(kind === "PRODUCT" ? { view: "product", id } : { view: "mapping", id })}
+        />
+      )}
+      {page.view === "etl" && <EtlOverview me={me} onOpen={(id) => navigate({ view: "etlJob", id })} />}
+      {page.view === "etlJob" && (
+        <EtlJobView
+          key={page.id}
+          id={page.id}
+          me={me}
+          onBack={() => navigate({ view: "etl" })}
+          onOpenJob={(name) => {
+            etlApi
+              .jobs()
+              .then((jobs) => {
+                const target = jobs.find((job) => job.name === name);
+                if (target) {
+                  navigate({ view: "etlJob", id: target.id });
+                } else {
+                  window.alert(`Der Job ${name} ist nicht importiert.`);
+                }
+              })
+              .catch((cause: Error) => setError(cause.message));
+          }}
         />
       )}
       {page.view === "graph" && (

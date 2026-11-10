@@ -5,7 +5,9 @@ export type Page =
   | { view: "product"; id: string }
   | { view: "graph" }
   | { view: "requirements" }
-  | { view: "releases" };
+  | { view: "releases" }
+  | { view: "etl" }
+  | { view: "etlJob"; id: string };
 
 /** Hash routes work without server configuration; Jira and Confluence link to them. */
 export function toHash(page: Page): string {
@@ -14,6 +16,8 @@ export function toHash(page: Page): string {
       return `#/mappings/${page.id}`;
     case "product":
       return `#/products/${page.id}`;
+    case "etlJob":
+      return `#/etl/${page.id}`;
     default:
       return `#/${page.view}`;
   }
@@ -26,6 +30,8 @@ export function fromHash(hash: string): Page {
       return id ? { view: "mapping", id } : { view: "mappings" };
     case "products":
       return id ? { view: "product", id } : { view: "products" };
+    case "etl":
+      return id ? { view: "etlJob", id } : { view: "etl" };
     case "graph":
       return { view: "graph" };
     case "requirements":

@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
@@ -34,6 +35,12 @@ public class ApiExceptions {
     ProblemDetail optimisticLock(OptimisticLockingFailureException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                 "Das Mapping wurde zwischenzeitlich von jemand anderem geändert. Bitte neu laden.");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ProblemDetail uploadTooLarge(MaxUploadSizeExceededException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONTENT_TOO_LARGE,
+                "Die Datei ist größer als erlaubt. Das Limit lässt sich mit UPLOAD_MAX_SIZE erhöhen.");
     }
 
     @ExceptionHandler(ResponseStatusException.class)

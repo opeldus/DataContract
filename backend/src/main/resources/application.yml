@@ -10,9 +10,10 @@ spring:
       ddl-auto: validate
     open-in-view: false
   servlet:
+    # DataStage exports of whole projects can be several hundred MB.
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: ${UPLOAD_MAX_SIZE:500MB}
+      max-request-size: ${UPLOAD_MAX_SIZE:500MB}
 
 logging:
   level:

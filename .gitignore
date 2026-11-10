@@ -7,3 +7,6 @@ backend/data/
 .vscode/
 *.log
 .env
+# DataStage exports can contain connection details
+*.dsx
+*.isx

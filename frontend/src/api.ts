@@ -459,3 +459,96 @@ export const api = {
   searchColumns: (dataset: string, q: string, release: string | null) =>
     request<ColumnSuggestion[]>(`/api/catalog/columns?${new URLSearchParams({ dataset, q, ...(release ? { release } : {}) })}`),
 };
+
+export type EtlJobKind = "PARALLEL" | "SEQUENCE" | "UNKNOWN";
+
+export interface EtlJobSummary {
+  id: string;
+  name: string;
+  kind: EtlJobKind;
+  category: string | null;
+  stages: number;
+  warnings: number;
+  sourceFile: string;
+  importedBy: string;
+  importedAt: string;
+}
+
+export interface EtlTableAccess {
+  name: string;
+  access: "READ" | "WRITE";
+  kind: "TABLE" | "FILE";
+  operation: string;
+}
+
+export interface EtlStage {
+  id: string;
+  name: string;
+  oleType: string | null;
+  stageType: string | null;
+  tables: EtlTableAccess[];
+  sql: string[];
+  calledJob: string | null;
+}
+
+export interface EtlLink {
+  from: string;
+  to: string;
+  name: string | null;
+  condition: string | null;
+}
+
+export interface EtlJobDetail {
+  id: string;
+  job: {
+    name: string;
+    kind: EtlJobKind;
+    category: string | null;
+    description: string | null;
+    stages: EtlStage[];
+    links: EtlLink[];
+    warnings: string[];
+  };
+  sourceFile: string;
+  importedBy: string;
+  importedAt: string;
+  sequence: string;
+}
+
+export interface EtlImportReport {
+  imported: string[];
+  unreadable: { path: string; content: string }[];
+  warnings: string[];
+}
+
+export interface EtlNode {
+  id: string;
+  kind: "JOB" | "SEQUENCE" | "MISSING_JOB" | "TABLE" | "FILE";
+  label: string;
+  jobId: string | null;
+}
+
+export interface EtlEdge {
+  from: string;
+  to: string;
+  kind: "READS" | "WRITES" | "STARTS";
+}
+
+export interface EtlGraph {
+  nodes: EtlNode[];
+  edges: EtlEdge[];
+}
+
+export const etlApi = {
+  jobs: () => request<EtlJobSummary[]>("/api/etl/jobs"),
+  job: (id: string) => request<EtlJobDetail>(`/api/etl/jobs/${id}`),
+  remove: (id: string) => request<void>(`/api/etl/jobs/${id}`, { method: "DELETE" }),
+  graph: () => request<EtlGraph>("/api/etl/graph"),
+  sequence: (node: string) =>
+    request<{ mermaid: string }>(`/api/etl/sequence?${new URLSearchParams({ node })}`),
+  importFile: (file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return request<EtlImportReport>("/api/etl/imports", { method: "POST", body });
+  },
+};

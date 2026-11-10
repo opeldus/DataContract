@@ -61,6 +61,7 @@ Ohne Profil nutzt die Anwendung PostgreSQL (`docker-compose.yml`) und legt keine
 | `GIT_REMOTE_URL`, `GIT_BRANCH` | Artefakt-Repo; ohne URL bleiben Commits lokal |
 | `GIT_USERNAME`, `GIT_TOKEN` | Zugang des technischen Git-Users über HTTPS |
 | `GIT_WORKDIR`, `GIT_BOT_NAME`, `GIT_BOT_EMAIL` | Arbeitsverzeichnis und Committer |
+| `UPLOAD_MAX_SIZE` | Größte Datei beim Import, Standard `500MB` |
 | `DDL_REMOTE_URL`, `DDL_BRANCH`, `DDL_PATH` | Repo mit den DDL-Dateien (`*.sql`) und optional ein Ordner; ohne URL entfällt der Vergleich |
 | `DDL_USERNAME`, `DDL_TOKEN`, `DDL_WORKDIR` | Lesezugang über HTTPS und Arbeitsverzeichnis |
 
@@ -122,3 +123,11 @@ cd frontend && npm test && npm run build
 
 Apache License 2.0, siehe [LICENSE](LICENSE). Die Schemas in `backend/src/main/resources/schema` stammen aus den
 Standards ODCS und ODPS des Bitol-Projekts (Linux Foundation) und stehen ebenfalls unter Apache 2.0.
+
+## DataStage-Jobs analysieren
+
+Der Bereich **DataStage** zeigt bestehende Jobs von IBM InfoSphere DataStage als Ablauf, als Sequenzdiagramm und als Verarbeitungskette über mehrere Jobs. Er liest nur und schreibt nichts nach DataStage. Gespeichert wird nur das Analyseergebnis mit Stages, Tabellen und SQL, nicht der Export selbst.
+
+- **DSX** wird gelesen. Ein Export entsteht zum Beispiel mit `dsexport`, ein selbst geschriebenes Beispiel steht in `SampleDsx` unter den Tests. Exporte gehören nicht ins Repository, `.gitignore` schließt `*.dsx` und `*.isx` aus.
+- **ISX** wird entpackt. Das innere XML ist nicht dokumentiert und wird deshalb noch nicht ausgewertet: Der Import listet solche Dateien mit ihrem Wurzelelement auf.
+- **Grenzen:** Shared Container werden nicht aufgelöst. Tabellennamen müssen über Jobs hinweg gleich geschrieben sein, damit die Kette sie verbindet; Job-Parameter werden nicht eingesetzt. Dynamisch gebautes SQL wird nicht erkannt.

@@ -154,6 +154,7 @@ select:disabled { background: var(--bg); color: var(--muted); }
 .graph-node text { fill: var(--text); font-size: 12px; }
 .graph-node.product text { fill: var(--accent-text); }
 .graph-node .version { font-size: 10.5px; opacity: 0.8; }
+.graph-node.asset rect { fill: var(--bg); stroke: var(--muted); stroke-dasharray: 4 3; }
 .graph-node.dimmed { opacity: 0.3; }
 .graph-node.selected rect { stroke: #d8a200; stroke-width: 3; }
 .graph-edge { fill: none; stroke: #9aa5b4; stroke-width: 1.5; }
@@ -191,3 +192,7 @@ select:disabled { background: var(--bg); color: var(--muted); }
 .release-select select { width: auto; color: var(--text); }
 .inherited { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .conflict-panel { border-color: var(--error); }
+
+.etl-report { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
+.sequence-diagram { overflow-x: auto; background: #fff; border-radius: 6px; }
+.sequence-diagram svg { display: block; }
